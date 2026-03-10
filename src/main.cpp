@@ -1,3 +1,4 @@
+#include "FastPWM.h"
 #include "mbed.h"
 
 // pes board pin map
@@ -38,6 +39,8 @@ int main()
     DigitalOut led1(PB_9);
 
     // --- adding variables and objects and applying functions starts here ---
+    // motor M1
+    FastPWM pwm_M1(PB_PWM_M1); // create FastPWM object to command motor M1
 
     // start timer
     main_task_timer.start();
@@ -51,6 +54,8 @@ int main()
         if (do_execute_main_task) {
 
             // --- code that runs when the blue button was pressed goes here ---
+            
+            pwm_M1.write(0.75f); // apply 6V to the motor
 
             // visual feedback that the main task is executed, setting this once would actually be enough
             led1 = 1;
