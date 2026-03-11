@@ -6,6 +6,7 @@
 
 // drivers
 #include "DebounceIn.h"
+#include "DCMotor.h"
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -16,6 +17,7 @@ bool do_reset_all_once = false;    // this variable is used to reset certain var
 DebounceIn user_button(BUTTON1);   // create DebounceIn to evaluate the user button
 void toggle_do_execute_main_fcn(); // custom function which is getting executed when user
                                    // button gets pressed, definition at the end
+
 
 // main runs as an own thread
 int main()
@@ -38,9 +40,39 @@ int main()
     // a led has an anode (+) and a cathode (-), the cathode needs to be connected to ground via the resistor
     DigitalOut led1(PB_9);
 
-    // --- adding variables and objects and applying functions starts here ---
-    // motor M1
-    FastPWM pwm_M1(PB_PWM_M1); // create FastPWM object to command motor M1
+    // --- adding variables and objects and applying functions starts here ---    
+    /* MOTOR M1 OPEN LOOP*/
+    // FastPWM pwm_M1(PB_PWM_M1); // create FastPWM object to command motor M1
+    // create object to enable power electronics for the DC motors
+    DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
+    /* END MOTOR M1 OPEN LOOP*/
+
+    /* MOTOR M2 CLOSED LOOP*/
+    // const float voltage_max = 12.0f; // maximum voltage of battery packs, adjust this to
+                                    // 6.0f V if you only use one battery pack
+    // const float gear_ratio_M2 = 78.125f; // gear ratio
+    // const float kn_M2 = 180.0f / 12.0f;  // motor constant [rpm/V]
+    // it is assumed that only one motor is available, therefore
+    // we use the pins from M1, so you can leave it connected to M1
+    // DCMotor motor_M2(PB_PWM_M1, PB_ENC_A_M1, PB_ENC_B_M1, gear_ratio_M2, kn_M2, voltage_max);
+    // enable the motion planner for smooth movements
+    // motor_M2.enableMotionPlanner();
+    // motor_M2.setVelocity(motor_M2.getMaxVelocity() * 0.8f);
+    // limit max. acceleration to half of the default acceleration
+    // motor_M2.setMaxAcceleration(motor_M2.getMaxAcceleration() * 0.01f);
+    /* MOTOR M2 CLOSESD LOOP*/
+
+    /*MOTOR M3 CLOSED LOOP*/
+    // motor M3
+    const float gear_ratio_M3 = 78.125f; // gear ratio
+    const float kn_M3 = 180.0f / 12.0f;  // motor constant [rpm/V]
+    // it is assumed that only one motor is available, therefore
+    // we use the pins from M1, so you can leave it connected to M1
+    DCMotor motor_M3(PB_PWM_M1, PB_ENC_A_M1, PB_ENC_B_M1, gear_ratio_M3, kn_M3, voltage_max);
+    // enable the motion planner for smooth movement
+    motor_M3.enableMotionPlanner();
+    // limit max. velocity to half physical possible velocity
+    motor_M3.setMaxVelocity(motor_M3.getMaxPhysicalVelocity() * 0.5f);
 
     // start timer
     main_task_timer.start();
@@ -54,8 +86,25 @@ int main()
         if (do_execute_main_task) {
 
             // --- code that runs when the blue button was pressed goes here ---
-            
-            pwm_M1.write(0.75f); // apply 6V to the motor
+
+            /* MOTOR M1 - OPEN LOOP*/
+            // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
+            enable_motors = 1;
+            // pwm_M1.write(0.75f); // apply 6V to the motor
+            /* END MOTOR M1 OPEN LOOP*/
+
+            /*MOTOR M2 CLOSED LOOP Acceleration*/
+            // limit max. velocity to half physical possible velocity
+            // motor_M2.setMaxVelocity(motor_M2.getMaxPhysicalVelocity() * 0.8f);
+            // print to the serial terminal
+            // printf("Motor velocity: %f \n", motor_M2.getVelocity());
+            /* MOTOR M2 CLOSED LOOP*/
+
+            /* MOTOR M3 CLOSED LOOP Rotations*/
+            motor_M3.setRotation(3.0f);
+            // print to the serial terminal
+            printf("Motor position: %f \n", motor_M3.getRotation());
+            /* MOTOR M3 CLOSED LOOP*/
 
             // visual feedback that the main task is executed, setting this once would actually be enough
             led1 = 1;
