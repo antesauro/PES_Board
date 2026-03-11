@@ -44,7 +44,7 @@ int main()
     // --- adding variables and objects and applying functions starts here ---
 
     // mechanical button
-    DigitalIn mechanical_button(PC_5); // create DigitalIn object to evaluate mechanical button, you
+    DigitalIn mechanical_button(PC_3); // create DigitalIn object to evaluate mechanical button, you
                                        // need to specify the mode for proper usage, see below
     mechanical_button.mode(PullUp);    // sets pullup between pin and 3.3 V, so that there
                                        // is a defined potential
