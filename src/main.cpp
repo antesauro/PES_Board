@@ -5,8 +5,9 @@
 #include "PESBoardPinMap.h"
 
 // drivers
-#include "DebounceIn.h"
 #include "DCMotor.h"
+#include "DebounceIn.h"
+#include "UltrasonicSensor.h"
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -40,7 +41,20 @@ int main()
     // a led has an anode (+) and a cathode (-), the cathode needs to be connected to ground via the resistor
     DigitalOut led1(PB_9);
 
-    // --- adding variables and objects and applying functions starts here ---    
+    // --- adding variables and objects and applying functions starts here ---
+
+    // mechanical button
+    DigitalIn mechanical_button(PC_5); // create DigitalIn object to evaluate mechanical button, you
+                                       // need to specify the mode for proper usage, see below
+    mechanical_button.mode(PullUp);    // sets pullup between pin and 3.3 V, so that there
+                                       // is a defined potential
+
+    /* ULTRASONIC SENSOR PART */
+    UltrasonicSensor us_sensor(PB_D3);
+    float us_distance_cm = 0.0f;
+
+    /* END ULTRASONIC SENSOR PART*/
+
     /* MOTOR M1 OPEN LOOP*/
     // FastPWM pwm_M1(PB_PWM_M1); // create FastPWM object to command motor M1
     // create object to enable power electronics for the DC motors
@@ -48,7 +62,7 @@ int main()
     /* END MOTOR M1 OPEN LOOP*/
 
     /* MOTOR M2 CLOSED LOOP*/
-    // const float voltage_max = 12.0f; // maximum voltage of battery packs, adjust this to
+    const float voltage_max = 12.0f; // maximum voltage of battery packs, adjust this to
                                     // 6.0f V if you only use one battery pack
     // const float gear_ratio_M2 = 78.125f; // gear ratio
     // const float kn_M2 = 180.0f / 12.0f;  // motor constant [rpm/V]
@@ -74,6 +88,15 @@ int main()
     // limit max. velocity to half physical possible velocity
     motor_M3.setMaxVelocity(motor_M3.getMaxPhysicalVelocity() * 0.5f);
 
+    // set up states for state machine
+    enum RobotState {
+        INITIAL,
+        SLEEP,
+        FORWARD,
+        BACKWARD,
+        EMERGENCY
+    } robot_state = RobotState::INITIAL;
+
     // start timer
     main_task_timer.start();
 
@@ -83,31 +106,81 @@ int main()
 
         // --- code that runs every cycle at the start goes here ---
 
+        // read us sensor distance, only valid measurements will update us_distance_cm
+        const float us_distance_cm_candidate = us_sensor.read();
+        if (us_distance_cm_candidate > 0.0f)
+            us_distance_cm = us_distance_cm_candidate;
+
         if (do_execute_main_task) {
 
             // --- code that runs when the blue button was pressed goes here ---
+            // state machine
+            switch (robot_state) {
+                case RobotState::INITIAL: {
+                    // enable hardwaredriver dc motors: 0 -> disabled, 1 -> enabled
+                    enable_motors = 1;
+                    printf("Robot State: INITIAL\n");
+                    robot_state = RobotState::SLEEP;
+                    break;
+                }
+                case RobotState::SLEEP: {
+                    // wait for the signal from the user, so to run the process
+                    // that is triggered by clicking the mechanical button
+                    // then go to the FORWARD state
+                    printf("Robot State: SLEEP\n");
+                    if (mechanical_button.read())
+                        robot_state = RobotState::FORWARD;
 
-            /* MOTOR M1 - OPEN LOOP*/
-            // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
-            enable_motors = 1;
-            // pwm_M1.write(0.75f); // apply 6V to the motor
-            /* END MOTOR M1 OPEN LOOP*/
+                    break;
+                }
+                case RobotState::FORWARD: {
+                    // press is moving forward until it reaches 2.9f rotations,
+                    // when reaching the value go to BACKWARD
+                    motor_M3.setRotation(2.9f); // setting this once would actually be enough
+                    // if the distance from the sensor is less than 4.5f cm,
+                    // we transition to the EMERGENCY state
+                    printf("Robot State: FORWARD\n");
+                    if (us_distance_cm < 4.5f)
+                        robot_state = RobotState::EMERGENCY;
+                    // switching condition is slightly smaller for robustness
+                    if (motor_M3.getRotation() > 2.89f)
+                        robot_state = RobotState::BACKWARD;
+                    break;
+                }
+                case RobotState::BACKWARD: {
+                    // move backwards to the initial position
+                    // and go to the SLEEP state if reached
+                    motor_M3.setRotation(0.0f);
+                    printf("Robot State: BACKWARD\n");
+                    // switching condition is slightly bigger for robustness
+                    if (motor_M3.getRotation() < 0.01f)
+                        robot_state = RobotState::SLEEP;
 
-            /*MOTOR M2 CLOSED LOOP Acceleration*/
-            // limit max. velocity to half physical possible velocity
-            // motor_M2.setMaxVelocity(motor_M2.getMaxPhysicalVelocity() * 0.8f);
-            // print to the serial terminal
-            // printf("Motor velocity: %f \n", motor_M2.getVelocity());
-            /* MOTOR M2 CLOSED LOOP*/
+                    break;
+                }
+                case RobotState::EMERGENCY: {
+                    // disable the motion planner and
+                    // move to the initial position asap
+                    // then reset the system
+                    motor_M3.disableMotionPlanner();
+                    motor_M3.setRotation(0.0f);
+                    printf("Robot State: EMERGENCY\n");
+                    if (motor_M3.getRotation() < 0.01f)
+                        toggle_do_execute_main_fcn();
+                    break;
+                }
+                default: {
 
-            /* MOTOR M3 CLOSED LOOP Rotations*/
-            motor_M3.setRotation(3.0f);
-            // print to the serial terminal
-            printf("Motor position: %f \n", motor_M3.getRotation());
-            /* MOTOR M3 CLOSED LOOP*/
+                    break; // do nothing
+                }
+            }
+            
 
             // visual feedback that the main task is executed, setting this once would actually be enough
             led1 = 1;
+            // print to the serial terminal
+            printf("US Sensor in cm: %f, DC Motor Rotations: %f\n", us_distance_cm, motor_M3.getRotation());
+
         } else {
             // the following code block gets executed only once
             if (do_reset_all_once) {
@@ -116,7 +189,14 @@ int main()
                 // --- variables and objects that should be reset go here ---
 
                 // reset variables and objects
+                // reset variables and objects
                 led1 = 0;
+                enable_motors = 0;
+                us_distance_cm = 0.0f;
+                motor_M3.setMotionPlannerPosition(0.0f);
+                motor_M3.setMotionPlannerVelocity(0.0f);
+                motor_M3.enableMotionPlanner();
+                robot_state = RobotState::INITIAL;
             }
         }
 
