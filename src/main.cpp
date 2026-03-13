@@ -99,113 +99,92 @@ int main()
     main_task_timer.start();
 
     // --- code that runs every cycle at the start goes here ---
-    // set up states for state machine
+
+    // Set up robot states
     enum RobotState {
         INITIAL,
-        EXECUTION,
+        READY,
+        DRIVE,
+        RETRIEVE,
+        PICKUP,
+        DELIVER,
         SLEEP,
         EMERGENCY
     } robot_state = RobotState::INITIAL;
 
-    // this loop will run forever
-    while (true) {
+    // this loop will run as long as no emergeny has been met
+    int toggle_emergency = 0;
+
+    while (!toggle_emergency) {
         main_task_timer.reset();
 
-        
+        // state machine
+        switch (robot_state) {
+            case RobotState::INITIAL:
+                printf("INITIAL\n");
+                if (!servo_D0.isEnabled())
+                    servo_D0.enable();
 
-        if (do_execute_main_task) {
+                robot_state = RobotState::READY;
+                break;
 
-            // --- code that runs when the blue button was pressed goes here ---
-            // state machine
-            switch (robot_state) {
-                case RobotState::INITIAL: 
-                    printf("INITIAL\n");
-                    if (!servo_D0.isEnabled())
-                        servo_D0.enable();
+            case RobotState::READY:
+                printf("READY\n");
 
-                    robot_state = RobotState::EXECUTION;
-                    break;
-                
-                case RobotState::EXECUTION: 
-                    printf("EXECUTION\n");
-                    // function to map the distance to the servo movement (us_distance_min, us_distance_max) ->
-                    // (0.0f, 1.0f)
-                    servo_input = (us_distance_cm - us_distance_min) / (us_distance_max - us_distance_min);
-                    // values smaller than 0.0f or bigger than 1.0f are constrained to the range (0.0f, 1.0f) in
-                    // setPulseWidth
-                    servo_D0.setPulseWidth(servo_input);
-                    // if the measurement is outside the min or max limit go to SLEEP
-                    if ((us_distance_cm < us_distance_min) || (us_distance_cm > us_distance_max))
-                        robot_state = RobotState::SLEEP;
+                if (do_execute_main_task) {
 
-                    // if the mechanical button is pressed go to EMERGENCY
-                    if (mechanical_button.read())
-                        robot_state = RobotState::EMERGENCY;
-                    break;
-                
-                case RobotState::SLEEP: 
-                    printf("SLEEP\n");
-                    // if the measurement is within the min and max limits go to EXECUTION
-                    if ((us_distance_cm > us_distance_min) && (us_distance_cm < us_distance_max))
-                        robot_state = RobotState::EXECUTION;
+                    // --- code that runs when the blue button was pressed goes here ---
 
-                    // if the mechanical button is pressed go to EMERGENCY
-                    if (mechanical_button.read())
-                        robot_state = RobotState::EMERGENCY;
-                    break;
-                
-                case RobotState::EMERGENCY: 
-                    printf("EMERGENCY\n");
-                    // the transition to the emergency state causes the execution of the commands contained
-                    // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
-                    // reset
-                    toggle_do_execute_main_fcn();
-                    break;
-                
-                default:
-                    break; // do nothing
-                
-            }
+                    led1 = 1;
+                } else {
+                    // the following code block gets executed only once
+                    if (do_reset_all_once) {
+                        do_reset_all_once = false;
+                        // --- variables and objects that should be reset go here ---
+                        // reset variables and objects
+                        robot_state = RobotState::INITIAL;
 
+                        led1 = 0;
+                    }
+                }
 
+                break;
 
-            // calculate inputs for the servos for the next cycle
-/*             if ((servo_input < 1.0f) &&                     // constrain servo_input to be < 1.0f
-                (servo_counter % loops_per_seconds == 0) && // true if servo_counter is a multiple of loops_per_second
-                (servo_counter != 0))                       // avoid servo_counter = 0
-                servo_input += 0.05f;
-            servo_counter++; */
-            
-            // print to the serial terminal
-            //printf("Pulse width: %f \n", servo_input);
+            case RobotState::DRIVE:
+                printf("DRIVE\n");
 
-            // read us sensor distance, non valid measurements will return -1.0f
-            // read us sensor distance, only valid measurements will update us_distance_cm
-            const float us_distance_cm_candidate = us_sensor.read();
-            if (us_distance_cm_candidate > 0.0f)
-                us_distance_cm = us_distance_cm_candidate;
+                break;
 
-            // print to serial terminal
-            printf("Distance US: %f \n", us_distance_cm);
+            case RobotState::RETRIEVE:
+                printf("RETRIEVE\n");
 
-            // visual feedback that the main task is executed, setting this once would actually be enough
-            led1 = 1;
-        } else {
-            // the following code block gets executed only once
-            if (do_reset_all_once) {
-                do_reset_all_once = false;
+                break;
 
-                // --- variables and objects that should be reset go here ---
-                // reset variables and objects
-                
-                servo_D0.disable();
-                // servo_D1.disable();
-                servo_input = 0.0f;
-                robot_state = RobotState::INITIAL;
+            case RobotState::PICKUP:
+                printf("PICKUP\n");
 
-                // reset variables and objects
-                led1 = 0;
-            }
+                break;
+
+            case RobotState::DELIVER:
+                printf("DELIVER\n");
+
+                break;
+
+            case RobotState::SLEEP:
+                printf("SLEEP\n");
+
+                break;
+
+            case RobotState::EMERGENCY:
+                printf("EMERGENCY\n");
+                // the transition to the emergency state causes the execution of the commands contained
+                // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
+                // reset
+                toggle_emergency = 1;
+                break;
+
+            default:
+                break; // do nothing
         }
 
         // toggling the user led
