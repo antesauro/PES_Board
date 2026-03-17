@@ -1,12 +1,35 @@
 #include "mbed.h"
+#include <math.h>
 
 // pes board pin map
 #include "PESBoardPinMap.h"
 
 // drivers
 #include "DebounceIn.h"
+#include "PIDCntrl.h"
+#include "SensorBar.h"
 #include "Servo.h"
 #include "UltrasonicSensor.h"
+
+// line-following constants
+static constexpr float    GOOD_POSITION               = 0.0f;
+static constexpr float    STEERING_CENTER             = 0.5f;
+static constexpr float    DRIVE_VOLTAGE_FULL_POWER    = 12.0f;
+static constexpr float    STEERING_MIN                = 0.15f;
+static constexpr float    STEERING_MAX                = 0.85f;
+static constexpr float    PID_KP                      = -0.0035f;
+static constexpr float    PID_KI                      = 0.0f;
+static constexpr float    PID_KD                      = 0.0f;
+static constexpr float    PID_DT_SECONDS              = 0.020f;
+static constexpr uint8_t  SENSOR_MASK_B2_TO_B5        = 0x3C;
+static constexpr uint8_t  SENSOR_MASK_ALL_BITS        = 0xFF;
+static constexpr uint8_t  LINE_EVENT_PICKUP_HOUSE     = 1;
+static constexpr uint8_t  LINE_EVENT_DELIVERY_HOUSE   = 2;
+static constexpr int      PICKUP_HOUSE_DISTANCE_MM    = 100;
+static constexpr int      DELIVERY_HOUSE_DISTANCE_MM  = 50;
+
+// Forward-declaration so the function can be called from within main()
+uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller);
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -49,6 +72,14 @@ int main()
                                     // is a defined potential
     
     
+    // sensor bar and PID controller for line following
+    SensorBar sensor_bar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false);
+    sensor_bar.clearInvertBits();
+    sensor_bar.clearBarStrobe();
+    PIDCntrl pid_controller(PID_KP, PID_KI, PID_KD, PID_DT_SECONDS,
+                            STEERING_MIN - STEERING_CENTER,
+                            STEERING_MAX - STEERING_CENTER);
+
     /* ULTRASONIC SENSOR PART */
     UltrasonicSensor us_sensor(PB_D3);
     float us_distance_cm = 0.0f;
@@ -132,9 +163,7 @@ int main()
                 printf("READY\n");
 
                 if (do_execute_main_task) {
-
-                    // --- code that runs when the blue button was pressed goes here ---
-
+                    robot_state = RobotState::DRIVE;
                     led1 = 1;
                 } else {
                     // the following code block gets executed only once
@@ -150,10 +179,17 @@ int main()
 
                 break;
 
-            case RobotState::DRIVE:
-                printf("DRIVE\n");
-
+            case RobotState::DRIVE: {
+                const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
+                if (action_code == LINE_EVENT_PICKUP_HOUSE) {
+                    printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
+                    robot_state = RobotState::PICKUP;
+                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) {
+                    printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
+                    robot_state = RobotState::DELIVER;
+                }
                 break;
+            }
 
             case RobotState::RETRIEVE:
                 printf("RETRIEVE\n");
@@ -199,6 +235,42 @@ int main()
         else
             thread_sleep_for(main_task_period_ms - main_task_elapsed_time_ms);
     }
+}
+
+uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
+{
+    sensor_bar.update();
+    const uint8_t raw        = sensor_bar.getRaw();
+    const bool line_detected = sensor_bar.isAnyLedActive();
+    const int8_t position    = line_detected ? sensor_bar.getBinaryPosition() : 0;
+    const float error        = line_detected
+                               ? (static_cast<float>(position) - GOOD_POSITION)
+                               : 0.0f;
+
+    uint8_t action_code = 0;
+    if (raw == SENSOR_MASK_ALL_BITS)        action_code = LINE_EVENT_DELIVERY_HOUSE;
+    else if (raw == SENSOR_MASK_B2_TO_B5)  action_code = LINE_EVENT_PICKUP_HOUSE;
+
+    float steering_command = STEERING_CENTER + pid_controller.update(error);
+
+    float max_error = fmaxf(fabsf(127.0f - GOOD_POSITION), fabsf(-127.0f - GOOD_POSITION));
+    if (max_error < 1.0e-6f) max_error = 1.0f;
+    float drive_scale = 1.0f - fabsf(error) / max_error;
+    if (drive_scale < 0.0f) drive_scale = 0.0f;
+    float drive_voltage = DRIVE_VOLTAGE_FULL_POWER * drive_scale;
+
+    if (!line_detected) {
+        pid_controller.reset();
+        steering_command = STEERING_CENTER;
+        drive_voltage    = 0.0f;
+    }
+
+    // steering_servo.setPulseWidth(steering_command);
+    // drive_motor.setVoltage(drive_voltage);
+    (void)steering_command;
+    (void)drive_voltage;
+
+    return action_code;
 }
 
 void toggle_do_execute_main_fcn()
