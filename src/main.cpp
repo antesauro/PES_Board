@@ -132,6 +132,8 @@ int main()
     // object to enable power electronics for the DC motors
     DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
 
+    FastPWM pwm_M1(PB_PWM_M1); // fastPWM obcject for the main drive motor
+
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
         INITIAL,
@@ -160,8 +162,11 @@ int main()
         switch (robot_state) {
             case RobotState::INITIAL:
                 printf("INITIAL\n");
-                if (!servo_D0.isEnabled())
+                if (!servo_D0.isEnabled()) {
                     servo_D0.enable();
+                }
+                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
+                enable_motors = 1;
 
                 robot_state = RobotState::READY;
                 break;
@@ -187,10 +192,10 @@ int main()
                 break;
 
             case RobotState::DRIVE: {
+                printf("DRIVE");
                 const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
 
-                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
-                enable_motors = 1;
+                pwm_M1.write(0.75f);
 
                 if (action_code == LINE_EVENT_PICKUP_HOUSE) {
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
