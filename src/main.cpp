@@ -18,8 +18,8 @@
 static constexpr float GOOD_POSITION = 0.0f;
 static constexpr float STEERING_CENTER = 0.5f;
 static constexpr float DRIVE_VOLTAGE_FULL_POWER = 12.0f;
-static constexpr float STEERING_MIN = 0.15f;
-static constexpr float STEERING_MAX = 0.85f;
+static constexpr float STEERING_MIN = 0.01f;
+static constexpr float STEERING_MAX = 0.99f;
 static constexpr float PID_KP = -0.0035f;
 static constexpr float PID_KI = 0.0f;
 static constexpr float PID_KD = 0.0f;
@@ -209,6 +209,7 @@ int main()
 
                 // command the servos
                 servo_D0.setPulseWidth(steering_command);
+                printf("Steering command: %f\n", steering_command);
                 // calculate inputs for the servos for the next cycle
                 if ((servo_input > 0.0f && servo_input < 1.0f) && // constrain servo_input to be < 1.0f
                     (servo_counter % loops_per_seconds ==
@@ -295,7 +296,7 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
     else if (raw == SENSOR_MASK_B2_TO_B5)
         action_code = LINE_EVENT_PICKUP_HOUSE;
     // calculate steering command with PID controller
-    steering_command = STEERING_CENTER + pid_controller.update(error);
+    steering_command = STEERING_CENTER - pid_controller.update(error);
 
     if (!line_detected) {
         pid_controller.reset();
