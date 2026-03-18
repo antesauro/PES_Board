@@ -26,8 +26,8 @@ static constexpr float PID_KD = 0.0f;
 static constexpr float PID_DT_SECONDS = 0.020f;
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
-static constexpr uint8_t LINE_EVENT_PICKUP_HOUSE = 1;
-static constexpr uint8_t LINE_EVENT_DELIVERY_HOUSE = 2;
+static constexpr int LINE_EVENT_PICKUP_HOUSE = 1;
+static constexpr int LINE_EVENT_DELIVERY_HOUSE = 2;
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
 
@@ -199,7 +199,7 @@ int main()
 
             case RobotState::DRIVE: {
                 printf("DRIVE\n");
-                const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
+                const int action_code = run_follow_line_fcn(sensor_bar, pid_controller); // run line following function and get action code for state transitions
 
                 pwm_M1.write(0.75f);
 
@@ -215,10 +215,10 @@ int main()
 
                 printf("Pulse width: %f \n", servo_input);
 
-                if (action_code == LINE_EVENT_PICKUP_HOUSE) {
+                if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions to the pickup state
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
                     robot_state = RobotState::PICKUP;
-                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) {
+                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // if the robot detects the delivery house, it transitions to the delivery state
                     printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
                     robot_state = RobotState::DELIVER;
                 }
@@ -278,33 +278,23 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
     const bool line_detected = sensor_bar.isAnyLedActive();
     const int8_t position = line_detected ? sensor_bar.getBinaryPosition() : 0;
     const float error = line_detected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
-
+// action code: 0 -> no event, 1 -> pickup house detected, 2 -> delivery house detected
     uint8_t action_code = 0;
     if (raw == SENSOR_MASK_ALL_BITS)
         action_code = LINE_EVENT_DELIVERY_HOUSE;
     else if (raw == SENSOR_MASK_B2_TO_B5)
         action_code = LINE_EVENT_PICKUP_HOUSE;
-
+    // calculate steering command with PID controller
     float steering_command = STEERING_CENTER + pid_controller.update(error);
-
-    float max_error = fmaxf(fabsf(127.0f - GOOD_POSITION), fabsf(-127.0f - GOOD_POSITION));
-    if (max_error < 1.0e-6f)
-        max_error = 1.0f;
-    float drive_scale = 1.0f - fabsf(error) / max_error;
-    if (drive_scale < 0.0f)
-        drive_scale = 0.0f;
-    float drive_voltage = DRIVE_VOLTAGE_FULL_POWER * drive_scale;
 
     if (!line_detected) {
         pid_controller.reset();
         steering_command = STEERING_CENTER;
-        drive_voltage = 0.0f;
     }
 
     // steering_servo.setPulseWidth(steering_command);
     // drive_motor.setVoltage(drive_voltage);
     (void)steering_command;
-    (void)drive_voltage;
 
     return action_code;
 }
