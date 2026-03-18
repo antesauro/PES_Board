@@ -51,7 +51,7 @@ int main()
 {
     // while loop gets executed every main_task_period_ms milliseconds, this is a
     // simple approach to repeatedly execute main
-    const int main_task_period_ms = 20; // define main task period time in ms e.g. 20 ms, therefore
+    const int main_task_period_ms = 50; // define main task period time in ms e.g. 20 ms, therefore
                                         // the main task will run 50 times per second
     Timer main_task_timer;              // create Timer object which we use to run the main task
                                         // every main_task_period_ms
@@ -96,18 +96,17 @@ int main()
     /* MOTOR OBJECTS*/
 
     // Servo Objects in order to control the correct pins
+
     Servo servo_D0(PB_D0); // Steering servo Object
-
     // minimal pulse width and maximal pulse width obtained from the servo calibration process
-
     // futuba S3003 STEERING SERVO
-    float servo_D0_ang_min = 0.030f; // careful, these values might differ from servo to servo
+    float servo_D0_ang_min = 0.035f; // careful, these values might differ from servo to servo
     float servo_D0_ang_max = 0.110f;
     // servo.setPulseWidth: before calibration (0,1) -> (min pwm, max pwm)
     // servo.setPulseWidth: after calibration (0,1) -> (servo_D0_ang_min, servo_D0_ang_max)
     servo_D0.calibratePulseMinMax(servo_D0_ang_min, servo_D0_ang_max);
     // default acceleration of the servo motion profile is 1.0e6f
-    servo_D0.setMaxAcceleration(0.3f);
+    servo_D0.setMaxAcceleration(0.4f);
 
     float servo_input = 0.0f;
     int servo_counter = 0; // define servo counter, this is an additional variable variable to command the servo
@@ -155,6 +154,8 @@ int main()
 
                 // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
                 enable_motors = 1;
+                if (!servo_D0.isEnabled())
+                    servo_D0.enable();
 
                 robot_state = RobotState::READY;
                 break;
@@ -199,28 +200,36 @@ int main()
 
             case RobotState::DRIVE: {
                 printf("DRIVE\n");
-                const int action_code = run_follow_line_fcn(sensor_bar, pid_controller); // run line following function and get action code for state transitions
+                const int action_code = run_follow_line_fcn(
+                    sensor_bar,
+                    pid_controller); // run line following function and get action code for state transitions
 
-                pwm_M1.write(0.75f);
+                pwm_M1.write(0.65f);
 
                 // command the servos
                 servo_D0.setPulseWidth(servo_input);
                 // calculate inputs for the servos for the next cycle
-                if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
+                if ((servo_input > 0.0f && servo_input < 1.0f) && // constrain servo_input to be < 1.0f
                     (servo_counter % loops_per_seconds ==
                      0) &&                // true if servo_counter is a multiple of loops_per_second
                     (servo_counter != 0)) // avoid servo_counter = 0
-                    servo_input += 0.005f;
+                    servo_input += 0.1f;
+
+                if (servo_input == 0.9f)
+                    servo_input = 0.1f;
+
                 servo_counter++;
 
                 printf("Pulse width: %f \n", servo_input);
 
-                if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions to the pickup state
+                if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions
+                                                              // to the pickup state
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
-                    robot_state = RobotState::PICKUP;
-                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // if the robot detects the delivery house, it transitions to the delivery state
+                    // robot_state = RobotState::PICKUP;
+                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // if the robot detects the delivery house, it
+                                                                       // transitions to the delivery state
                     printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
-                    robot_state = RobotState::DELIVER;
+                    // robot_state = RobotState::DELIVER;
                 }
                 break;
             }
@@ -278,7 +287,7 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
     const bool line_detected = sensor_bar.isAnyLedActive();
     const int8_t position = line_detected ? sensor_bar.getBinaryPosition() : 0;
     const float error = line_detected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
-// action code: 0 -> no event, 1 -> pickup house detected, 2 -> delivery house detected
+    // action code: 0 -> no event, 1 -> pickup house detected, 2 -> delivery house detected
     uint8_t action_code = 0;
     if (raw == SENSOR_MASK_ALL_BITS)
         action_code = LINE_EVENT_DELIVERY_HOUSE;
