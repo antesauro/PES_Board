@@ -292,9 +292,7 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
         steering_command = STEERING_CENTER;
     }
 
-    // steering_servo.setPulseWidth(steering_command);
-    // drive_motor.setVoltage(drive_voltage);
-    (void)steering_command;
+
 
     return action_code;
 }
