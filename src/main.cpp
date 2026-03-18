@@ -26,8 +26,8 @@ static constexpr float PID_KD = 0.0f;
 static constexpr float PID_DT_SECONDS = 0.020f;
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
-static constexpr uint8_t LINE_EVENT_PICKUP_HOUSE = 1;
-static constexpr uint8_t LINE_EVENT_DELIVERY_HOUSE = 2;
+static constexpr int LINE_EVENT_PICKUP_HOUSE = 1;
+static constexpr int LINE_EVENT_DELIVERY_HOUSE = 2;
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
 
@@ -96,33 +96,41 @@ int main()
     /* MOTOR OBJECTS*/
 
     // Servo Objects in order to control the correct pins
-    Servo servo_D0(PB_D0); // Steering servo Object
+    Servo servo_D0(PB_D0);
+    // Servo servo_D1(PB_D1);
+
+    /* to enable the sensor
+    // enable the servos
+    if (!servo_D0.isEnabled())
+        servo_D0.enable();
+    // if (!servo_D1.isEnabled())
+    //     servo_D1.enable();
+    */
 
     // minimal pulse width and maximal pulse width obtained from the servo calibration process
-
-    // futuba S3003 STEERING SERVO
-    float servo_D0_ang_min = 0.030f; // careful, these values might differ from servo to servo
-    float servo_D0_ang_max = 0.110f;
-    // servo.setPulseWidth: before calibration (0,1) -> (min pwm, max pwm)
-    // servo.setPulseWidth: after calibration (0,1) -> (servo_D0_ang_min, servo_D0_ang_max)
-    servo_D0.calibratePulseMinMax(servo_D0_ang_min, servo_D0_ang_max);
-    // default acceleration of the servo motion profile is 1.0e6f
-    servo_D0.setMaxAcceleration(0.3f);
-
-    float servo_input = 0.0f;
-    int servo_counter = 0; // define servo counter, this is an additional variable variable to command the servo
-
-    // reely S0090 CRANE SERVO
+    // futuba S3001
+    float servo_D0_ang_min = 0.0350f; // careful, these values might differ from servo to servo
+    float servo_D0_ang_max = 0.1150f;
+    // reely S0090
     // float servo_D1_ang_min = 0.0350f;
     // float servo_D1_ang_max = 0.1150f;
 
-    // Servo loop time
+    // servo.setPulseWidth: before calibration (0,1) -> (min pwm, max pwm)
+    // servo.setPulseWidth: after calibration (0,1) -> (servo_D0_ang_min, servo_D0_ang_max)
+    servo_D0.calibratePulseMinMax(servo_D0_ang_min, servo_D0_ang_max);
+    // servo_D1.calibratePulseMinMax(servo_D1_ang_min, servo_D1_ang_max);
+
+    // Variables for calibration Process Servo
+    float servo_input = 0.0f;
+    int servo_counter = 0; // define servo counter, this is an additional variable
+                           // used to command the servo
     const int loops_per_seconds = static_cast<int>(ceilf(1.0f / (0.001f * static_cast<float>(main_task_period_ms))));
+    // default acceleration of the servo motion profile is 1.0e6f
+    // servo_D0.setMaxAcceleration(0.6f);
+    // servo_D1.setMaxAcceleration(0.3f);
 
     // object to enable power electronics for the DC motors
     DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
-
-    FastPWM pwm_M1(PB_PWM_M1); // fastPWM obcject for the main drive motor
 
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
@@ -152,9 +160,8 @@ int main()
         switch (robot_state) {
             case RobotState::INITIAL:
                 printf("INITIAL\n");
-
-                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
-                enable_motors = 1;
+                if (!servo_D0.isEnabled())
+                    servo_D0.enable();
 
                 robot_state = RobotState::READY;
                 break;
@@ -165,23 +172,6 @@ int main()
                 if (do_execute_main_task) {
                     robot_state = RobotState::DRIVE;
                     led1 = 1;
-
-                    /* FOR SERVO CALIBRATION PROCESS ONLY*/
-                    /*
-                    printf("pulse width: %f\n", servo_input);
-                    if (!servo_D0.isEnabled())
-                        servo_D0.enable();
-                    // command the servos
-                    servo_D0.setPulseWidth(servo_input);
-                    // calculate inputs for the servos for the next cycle
-                    if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
-                        (servo_counter % loops_per_seconds ==
-                         0) &&                // true if servo_counter is a multiple of loops_per_second
-                        (servo_counter != 0)) // avoid servo_counter = 0
-                        servo_input += 0.005f;
-                    servo_counter++;*/
-                    /* SERVO CALIBRATION PROCESS*/
-
                 } else {
                     // the following code block gets executed only once
                     if (do_reset_all_once) {
@@ -189,8 +179,7 @@ int main()
                         // --- variables and objects that should be reset go here ---
                         // reset variables and objects
                         robot_state = RobotState::INITIAL;
-                        servo_D0.disable();
-                        servo_input = 0.0f;
+
                         led1 = 0;
                     }
                 }
@@ -198,27 +187,15 @@ int main()
                 break;
 
             case RobotState::DRIVE: {
-                printf("DRIVE\n");
-                const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
+                const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);  // execute line follower function, which returns an action code that indicates whether the pickup or delivery house was detected, or if no house was detected
 
-                pwm_M1.write(0.75f);
+                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
+                enable_motors = 1;
 
-                // command the servos
-                servo_D0.setPulseWidth(servo_input);
-                // calculate inputs for the servos for the next cycle
-                if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
-                    (servo_counter % loops_per_seconds ==
-                     0) &&                // true if servo_counter is a multiple of loops_per_second
-                    (servo_counter != 0)) // avoid servo_counter = 0
-                    servo_input += 0.005f;
-                servo_counter++;
-
-                printf("Pulse width: %f \n", servo_input);
-
-                if (action_code == LINE_EVENT_PICKUP_HOUSE) {
+                if (action_code == LINE_EVENT_PICKUP_HOUSE) { // the line follower function detected the pickup house, therefore we can transition to the pickup state
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
                     robot_state = RobotState::PICKUP;
-                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) {
+                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // the line follower function detected the delivery house, therefore we can transition to the delivery state
                     printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
                     robot_state = RobotState::DELIVER;
                 }
@@ -279,33 +256,25 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
     const int8_t position = line_detected ? sensor_bar.getBinaryPosition() : 0;
     const float error = line_detected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
 
-    uint8_t action_code = 0;
+
+    // the action code indicates whether the pickup or delivery house was detected, or if no house was detected
+    int action_code = 0;
     if (raw == SENSOR_MASK_ALL_BITS)
         action_code = LINE_EVENT_DELIVERY_HOUSE;
     else if (raw == SENSOR_MASK_B2_TO_B5)
         action_code = LINE_EVENT_PICKUP_HOUSE;
 
-    float steering_command = STEERING_CENTER + pid_controller.update(error);
+   // calculate the steering command based on the PID controller output and the steering center value
 
-    float max_error = fmaxf(fabsf(127.0f - GOOD_POSITION), fabsf(-127.0f - GOOD_POSITION));
-    if (max_error < 1.0e-6f)
-        max_error = 1.0f;
-    float drive_scale = 1.0f - fabsf(error) / max_error;
-    if (drive_scale < 0.0f)
-        drive_scale = 0.0f;
-    float drive_voltage = DRIVE_VOLTAGE_FULL_POWER * drive_scale;
+    float steering_command = STEERING_CENTER + pid_controller.update(error);
 
     if (!line_detected) {
         pid_controller.reset();
         steering_command = STEERING_CENTER;
-        drive_voltage = 0.0f;
     }
 
     // steering_servo.setPulseWidth(steering_command);
     // drive_motor.setVoltage(drive_voltage);
-    (void)steering_command;
-    (void)drive_voltage;
-
     return action_code;
 }
 
