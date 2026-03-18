@@ -30,6 +30,7 @@ static constexpr int LINE_EVENT_PICKUP_HOUSE = 1;
 static constexpr int LINE_EVENT_DELIVERY_HOUSE = 2;
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
+static float steering_command;
 
 // Forward-declaration so the function can be called from within main()
 uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller);
@@ -204,7 +205,7 @@ int main()
                 pwm_M1.write(0.75f);
 
                 // command the servos
-                servo_D0.setPulseWidth(servo_input);
+                servo_D0.setPulseWidth(steering_command);
                 // calculate inputs for the servos for the next cycle
                 if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
                     (servo_counter % loops_per_seconds ==
@@ -217,10 +218,10 @@ int main()
 
                 if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions to the pickup state
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
-                    robot_state = RobotState::PICKUP;
+                    //robot_state = RobotState::PICKUP;
                 } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // if the robot detects the delivery house, it transitions to the delivery state
                     printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
-                    robot_state = RobotState::DELIVER;
+                    //robot_state = RobotState::DELIVER;
                 }
                 break;
             }
@@ -285,7 +286,7 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
     else if (raw == SENSOR_MASK_B2_TO_B5)
         action_code = LINE_EVENT_PICKUP_HOUSE;
     // calculate steering command with PID controller
-    float steering_command = STEERING_CENTER + pid_controller.update(error);
+    steering_command = STEERING_CENTER + pid_controller.update(error);
 
     if (!line_detected) {
         pid_controller.reset();
