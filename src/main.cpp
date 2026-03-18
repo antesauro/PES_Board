@@ -1,35 +1,40 @@
-#include "mbed.h"
 #include <math.h>
+
+#include "mbed.h"
 
 // pes board pin map
 #include "PESBoardPinMap.h"
 
 // drivers
 #include "DebounceIn.h"
+#include "FastPWM.h"
 #include "PIDCntrl.h"
 #include "SensorBar.h"
 #include "Servo.h"
 #include "UltrasonicSensor.h"
 
+/* LINE FOLLOWER PART*/
 // line-following constants
-static constexpr float    GOOD_POSITION               = 0.0f;
-static constexpr float    STEERING_CENTER             = 0.5f;
-static constexpr float    DRIVE_VOLTAGE_FULL_POWER    = 12.0f;
-static constexpr float    STEERING_MIN                = 0.15f;
-static constexpr float    STEERING_MAX                = 0.85f;
-static constexpr float    PID_KP                      = -0.0035f;
-static constexpr float    PID_KI                      = 0.0f;
-static constexpr float    PID_KD                      = 0.0f;
-static constexpr float    PID_DT_SECONDS              = 0.020f;
-static constexpr uint8_t  SENSOR_MASK_B2_TO_B5        = 0x3C;
-static constexpr uint8_t  SENSOR_MASK_ALL_BITS        = 0xFF;
-static constexpr uint8_t  LINE_EVENT_PICKUP_HOUSE     = 1;
-static constexpr uint8_t  LINE_EVENT_DELIVERY_HOUSE   = 2;
-static constexpr int      PICKUP_HOUSE_DISTANCE_MM    = 100;
-static constexpr int      DELIVERY_HOUSE_DISTANCE_MM  = 50;
+static constexpr float GOOD_POSITION = 0.0f;
+static constexpr float STEERING_CENTER = 0.5f;
+static constexpr float DRIVE_VOLTAGE_FULL_POWER = 12.0f;
+static constexpr float STEERING_MIN = 0.15f;
+static constexpr float STEERING_MAX = 0.85f;
+static constexpr float PID_KP = -0.0035f;
+static constexpr float PID_KI = 0.0f;
+static constexpr float PID_KD = 0.0f;
+static constexpr float PID_DT_SECONDS = 0.020f;
+static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
+static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
+static constexpr uint8_t LINE_EVENT_PICKUP_HOUSE = 1;
+static constexpr uint8_t LINE_EVENT_DELIVERY_HOUSE = 2;
+static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
+static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
 
 // Forward-declaration so the function can be called from within main()
 uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller);
+
+/* END LINE FOLLOWER*/
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -40,14 +45,10 @@ bool do_reset_all_once = false;    // this variable is used to reset certain var
 DebounceIn user_button(BUTTON1);   // create DebounceIn to evaluate the user button
 void toggle_do_execute_main_fcn(); // custom function which is getting executed when user
                                    // button gets pressed, definition at the end
-                                                                   
+
 // main runs as an own thread
 int main()
 {
-
-    // attach button fall function address to user button object
-    user_button.fall(&toggle_do_execute_main_fcn);
-
     // while loop gets executed every main_task_period_ms milliseconds, this is a
     // simple approach to repeatedly execute main
     const int main_task_period_ms = 20; // define main task period time in ms e.g. 20 ms, therefore
@@ -55,6 +56,18 @@ int main()
     Timer main_task_timer;              // create Timer object which we use to run the main task
                                         // every main_task_period_ms
 
+    /* INPUT OBJECTS*/
+
+    // attach button fall function address to user button object
+    user_button.fall(&toggle_do_execute_main_fcn);
+
+    // Mechanical Button for emergency reset
+    DigitalIn mechanical_button(PC_5); // create DigitalIn object to evaluate mechanical button, you
+                                       // need to specify the mode for proper usage, see below
+    mechanical_button.mode(PullUp);    // sets pullup between pin and 3.3 V, so that there
+                                       // is a defined potential
+
+    /* OUTPUT OBJECTS*/
     // led on nucleo board
     DigitalOut user_led(LED1);
 
@@ -65,42 +78,34 @@ int main()
 
     // --- adding variables and objects and applying functions starts here ---
 
-        // Mechanical Button for emergency reset
-    DigitalIn mechanical_button(PC_5); // create DigitalIn object to evaluate mechanical button, you
-                                    // need to specify the mode for proper usage, see below
-    mechanical_button.mode(PullUp);    // sets pullup between pin and 3.3 V, so that there
-                                    // is a defined potential
-    
-    
+    /* SENSOR OBJECTS*/
     // sensor bar and PID controller for line following
     SensorBar sensor_bar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false);
     sensor_bar.clearInvertBits();
     sensor_bar.clearBarStrobe();
-    PIDCntrl pid_controller(PID_KP, PID_KI, PID_KD, PID_DT_SECONDS,
-                            STEERING_MIN - STEERING_CENTER,
-                            STEERING_MAX - STEERING_CENTER);
+    PIDCntrl pid_controller(
+        PID_KP, PID_KI, PID_KD, PID_DT_SECONDS, STEERING_MIN - STEERING_CENTER, STEERING_MAX - STEERING_CENTER);
 
-    /* ULTRASONIC SENSOR PART */
+    // Ultrasonic Sensor part
     UltrasonicSensor us_sensor(PB_D3);
     float us_distance_cm = 0.0f;
-
     // min and max ultrasonic sensor reading, (us_distance_min, us_distance_max) -> (servo_min, servo_max)
     float us_distance_min = 6.0f;
     float us_distance_max = 40.0f;
 
-    /* END ULTRASONIC SENSOR PART*/
-
-    /* SERVO PART */
+    /* MOTOR OBJECTS*/
 
     // Servo Objects in order to control the correct pins
     Servo servo_D0(PB_D0);
     // Servo servo_D1(PB_D1);
-    
+
+    /* to enable the sensor
     // enable the servos
     if (!servo_D0.isEnabled())
         servo_D0.enable();
     // if (!servo_D1.isEnabled())
-    //     servo_D1.enable(); 
+    //     servo_D1.enable();
+    */
 
     // minimal pulse width and maximal pulse width obtained from the servo calibration process
     // futuba S3001
@@ -118,20 +123,16 @@ int main()
     // Variables for calibration Process Servo
     float servo_input = 0.0f;
     int servo_counter = 0; // define servo counter, this is an additional variable
-                        // used to command the servo
+                           // used to command the servo
     const int loops_per_seconds = static_cast<int>(ceilf(1.0f / (0.001f * static_cast<float>(main_task_period_ms))));
     // default acceleration of the servo motion profile is 1.0e6f
     // servo_D0.setMaxAcceleration(0.6f);
     // servo_D1.setMaxAcceleration(0.3f);
 
-    /* END SERVO PART*/
+    // object to enable power electronics for the DC motors
+    DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
 
-    // start timer
-    main_task_timer.start();
-
-    // --- code that runs every cycle at the start goes here ---
-
-    // Set up robot states
+    /* ROBOT STATES DECLARATION*/
     enum RobotState {
         INITIAL,
         READY,
@@ -143,8 +144,14 @@ int main()
         EMERGENCY
     } robot_state = RobotState::INITIAL;
 
-    // this loop will run as long as no emergeny has been met
+    // Emergency toggle for the while loop
+    // the loop will run as long as no emergeny has been met
     int toggle_emergency = 0;
+
+    // --- code that runs every cycle at the start goes here ---
+
+    // start timer
+    main_task_timer.start();
 
     while (!toggle_emergency) {
         main_task_timer.reset();
@@ -181,6 +188,10 @@ int main()
 
             case RobotState::DRIVE: {
                 const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
+
+                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
+                enable_motors = 1;
+
                 if (action_code == LINE_EVENT_PICKUP_HOUSE) {
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
                     robot_state = RobotState::PICKUP;
@@ -240,29 +251,31 @@ int main()
 uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
 {
     sensor_bar.update();
-    const uint8_t raw        = sensor_bar.getRaw();
+    const uint8_t raw = sensor_bar.getRaw();
     const bool line_detected = sensor_bar.isAnyLedActive();
-    const int8_t position    = line_detected ? sensor_bar.getBinaryPosition() : 0;
-    const float error        = line_detected
-                               ? (static_cast<float>(position) - GOOD_POSITION)
-                               : 0.0f;
+    const int8_t position = line_detected ? sensor_bar.getBinaryPosition() : 0;
+    const float error = line_detected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
 
     uint8_t action_code = 0;
-    if (raw == SENSOR_MASK_ALL_BITS)        action_code = LINE_EVENT_DELIVERY_HOUSE;
-    else if (raw == SENSOR_MASK_B2_TO_B5)  action_code = LINE_EVENT_PICKUP_HOUSE;
+    if (raw == SENSOR_MASK_ALL_BITS)
+        action_code = LINE_EVENT_DELIVERY_HOUSE;
+    else if (raw == SENSOR_MASK_B2_TO_B5)
+        action_code = LINE_EVENT_PICKUP_HOUSE;
 
     float steering_command = STEERING_CENTER + pid_controller.update(error);
 
     float max_error = fmaxf(fabsf(127.0f - GOOD_POSITION), fabsf(-127.0f - GOOD_POSITION));
-    if (max_error < 1.0e-6f) max_error = 1.0f;
+    if (max_error < 1.0e-6f)
+        max_error = 1.0f;
     float drive_scale = 1.0f - fabsf(error) / max_error;
-    if (drive_scale < 0.0f) drive_scale = 0.0f;
+    if (drive_scale < 0.0f)
+        drive_scale = 0.0f;
     float drive_voltage = DRIVE_VOLTAGE_FULL_POWER * drive_scale;
 
     if (!line_detected) {
         pid_controller.reset();
         steering_command = STEERING_CENTER;
-        drive_voltage    = 0.0f;
+        drive_voltage = 0.0f;
     }
 
     // steering_servo.setPulseWidth(steering_command);
