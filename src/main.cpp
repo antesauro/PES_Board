@@ -96,38 +96,28 @@ int main()
     /* MOTOR OBJECTS*/
 
     // Servo Objects in order to control the correct pins
-    Servo servo_D0(PB_D0);
-    // Servo servo_D1(PB_D1);
-
-    /* to enable the sensor
-    // enable the servos
-    if (!servo_D0.isEnabled())
-        servo_D0.enable();
-    // if (!servo_D1.isEnabled())
-    //     servo_D1.enable();
-    */
+    Servo servo_D0(PB_D0); // Steering servo Object
 
     // minimal pulse width and maximal pulse width obtained from the servo calibration process
-    // futuba S3001
-    float servo_D0_ang_min = 0.0350f; // careful, these values might differ from servo to servo
-    float servo_D0_ang_max = 0.1150f;
-    // reely S0090
-    // float servo_D1_ang_min = 0.0350f;
-    // float servo_D1_ang_max = 0.1150f;
 
+    // futuba S3003 STEERING SERVO
+    float servo_D0_ang_min = 0.030f; // careful, these values might differ from servo to servo
+    float servo_D0_ang_max = 0.110f;
     // servo.setPulseWidth: before calibration (0,1) -> (min pwm, max pwm)
     // servo.setPulseWidth: after calibration (0,1) -> (servo_D0_ang_min, servo_D0_ang_max)
     servo_D0.calibratePulseMinMax(servo_D0_ang_min, servo_D0_ang_max);
-    // servo_D1.calibratePulseMinMax(servo_D1_ang_min, servo_D1_ang_max);
-
-    // Variables for calibration Process Servo
-    float servo_input = 0.0f;
-    int servo_counter = 0; // define servo counter, this is an additional variable
-                           // used to command the servo
-    const int loops_per_seconds = static_cast<int>(ceilf(1.0f / (0.001f * static_cast<float>(main_task_period_ms))));
     // default acceleration of the servo motion profile is 1.0e6f
-    // servo_D0.setMaxAcceleration(0.6f);
-    // servo_D1.setMaxAcceleration(0.3f);
+    servo_D0.setMaxAcceleration(0.3f);
+
+    float servo_input = 0.0f;
+    int servo_counter = 0; // define servo counter, this is an additional variable variable to command the servo
+
+    // reely S0090 CRANE SERVO
+    // float servo_D1_ang_min = 0.0350f;
+    // float servo_D1_ang_max = 0.1150f;
+
+    // Servo loop time
+    const int loops_per_seconds = static_cast<int>(ceilf(1.0f / (0.001f * static_cast<float>(main_task_period_ms))));
 
     // object to enable power electronics for the DC motors
     DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
@@ -162,9 +152,7 @@ int main()
         switch (robot_state) {
             case RobotState::INITIAL:
                 printf("INITIAL\n");
-                if (!servo_D0.isEnabled()) {
-                    servo_D0.enable();
-                }
+
                 // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
                 enable_motors = 1;
 
@@ -177,6 +165,23 @@ int main()
                 if (do_execute_main_task) {
                     robot_state = RobotState::DRIVE;
                     led1 = 1;
+
+                    /* FOR SERVO CALIBRATION PROCESS ONLY*/
+                    /*
+                    printf("pulse width: %f\n", servo_input);
+                    if (!servo_D0.isEnabled())
+                        servo_D0.enable();
+                    // command the servos
+                    servo_D0.setPulseWidth(servo_input);
+                    // calculate inputs for the servos for the next cycle
+                    if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
+                        (servo_counter % loops_per_seconds ==
+                         0) &&                // true if servo_counter is a multiple of loops_per_second
+                        (servo_counter != 0)) // avoid servo_counter = 0
+                        servo_input += 0.005f;
+                    servo_counter++;*/
+                    /* SERVO CALIBRATION PROCESS*/
+
                 } else {
                     // the following code block gets executed only once
                     if (do_reset_all_once) {
@@ -184,7 +189,8 @@ int main()
                         // --- variables and objects that should be reset go here ---
                         // reset variables and objects
                         robot_state = RobotState::INITIAL;
-
+                        servo_D0.disable();
+                        servo_input = 0.0f;
                         led1 = 0;
                     }
                 }
@@ -192,10 +198,22 @@ int main()
                 break;
 
             case RobotState::DRIVE: {
-                printf("DRIVE");
+                printf("DRIVE\n");
                 const uint8_t action_code = run_follow_line_fcn(sensor_bar, pid_controller);
 
                 pwm_M1.write(0.75f);
+
+                // command the servos
+                servo_D0.setPulseWidth(servo_input);
+                // calculate inputs for the servos for the next cycle
+                if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
+                    (servo_counter % loops_per_seconds ==
+                     0) &&                // true if servo_counter is a multiple of loops_per_second
+                    (servo_counter != 0)) // avoid servo_counter = 0
+                    servo_input += 0.005f;
+                servo_counter++;
+
+                printf("Pulse width: %f \n", servo_input);
 
                 if (action_code == LINE_EVENT_PICKUP_HOUSE) {
                     printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
