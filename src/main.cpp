@@ -15,7 +15,7 @@
 #include "UltrasonicSensor.h"
 
 /* LINE FOLLOWER PART*/
-// line-following constants
+// constants for line follower
 static constexpr float GOOD_POSITION = 0.0f;
 static constexpr float STEERING_CENTER = 0.5f;
 static constexpr float DRIVE_VOLTAGE_FULL_POWER = 12.0f;
@@ -25,6 +25,7 @@ static constexpr float PID_KP = -0.0035f;
 static constexpr float PID_KI = 0.0f;
 static constexpr float PID_KD = 0.0f;
 static constexpr float PID_DT_SECONDS = 0.020f;
+// sensor bar constants
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
 static constexpr int LINE_EVENT_PICKUP_HOUSE = 1;
@@ -32,11 +33,17 @@ static constexpr int LINE_EVENT_DELIVERY_HOUSE = 2;
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
 static float steering_command;
+// variables for ultrasonic sensor   
+static constexpr float us_distance_min = 6.0f;
+static constexpr float us_distance_max = 40.0f;
 
 // Forward-declaration so the function can be called from within main()
 uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller);
 
-/* END LINE FOLLOWER*/
+// Forward-declaration so the function can be called from within main()
+void ultrasonic_sensor_read_and_update(UltrasonicSensor &us_sensor, float &us_distance_cm, float us_distance_min, float us_distance_max);
+// Forward-declaration so the function can be called from within main()
+void sevo_calibration(Servo &servo_D0, float &servo_input, int &servo_counter, int loops_per_seconds);
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -90,10 +97,6 @@ int main()
 
     // Ultrasonic Sensor part
     UltrasonicSensor us_sensor(PB_D3);
-    float us_distance_cm = 0.0f;
-    // min and max ultrasonic sensor reading, (us_distance_min, us_distance_max) -> (servo_min, servo_max)
-    float us_distance_min = 6.0f;
-    float us_distance_max = 40.0f;
 
     // Color Sensor
     float color_raw_Hz[4] = {
@@ -163,6 +166,10 @@ int main()
     while (!toggle_emergency) {
         main_task_timer.reset();
 
+        // read ultrasonic sensor and update distance
+        float us_distance_cm = 0.0f;
+        ultrasonic_sensor_read_and_update(us_sensor, us_distance_cm, us_distance_min, us_distance_max);
+
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -182,22 +189,6 @@ int main()
                 if (do_execute_main_task) {
                     robot_state = RobotState::DRIVE;
                     led1 = 1;
-
-                    /* FOR SERVO CALIBRATION PROCESS ONLY*/
-                    /*
-                    printf("pulse width: %f\n", servo_input);
-                    if (!servo_D0.isEnabled())
-                        servo_D0.enable();
-                    // command the servos
-                    servo_D0.setPulseWidth(servo_input);
-                    // calculate inputs for the servos for the next cycle
-                    if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
-                        (servo_counter % loops_per_seconds ==
-                         0) &&                // true if servo_counter is a multiple of loops_per_second
-                        (servo_counter != 0)) // avoid servo_counter = 0
-                        servo_input += 0.005f;
-                    servo_counter++;*/
-                    /* SERVO CALIBRATION PROCESS*/
 
                 } else {
                     // the following code block gets executed only once
@@ -224,18 +215,7 @@ int main()
 
                 // command the servos
                 servo_D0.setPulseWidth(steering_command);
-                printf("Steering command: %f\n", steering_command);
-                // calculate inputs for the servos for the next cycle
-                if ((servo_input > 0.0f && servo_input < 1.0f) && // constrain servo_input to be < 1.0f
-                    (servo_counter % loops_per_seconds ==
-                     0) &&                // true if servo_counter is a multiple of loops_per_second
-                    (servo_counter != 0)) // avoid servo_counter = 0
-                    servo_input += 0.1f;
-
-                if (servo_input == 0.9f)
-                    servo_input = 0.1f;
-
-                servo_counter++;
+            
 
                 printf("Pulse width: %f \n", servo_input);
 
@@ -353,7 +333,31 @@ uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
 
     return action_code;
 }
+// implement the calibration process for the ultrasonic sensor here, e.g. by comparing the ultrasonic sensor readings with measurements from a reference device to find the gain and offset
+void ultrasonic_sensor_read_and_update(UltrasonicSensor &us_sensor, float &us_distance_cm, float us_distance_min, float us_distance_max){
 
+    // read us sensor distance, only valid measurements will update us_distance_cm
+    const float us_distance_cm_candidate = us_sensor.read();
+    if (us_distance_cm_candidate > us_distance_min && us_distance_cm_candidate < us_distance_max)
+        us_distance_cm = us_distance_cm_candidate;
+        return;
+}
+
+void sevo_calibration(Servo &servo_D0, float &servo_input, int &servo_counter, int loops_per_seconds){
+    /* FOR SERVO CALIBRATION PROCESS ONLY*/
+    printf("pulse width: %f\n", servo_input);
+    if (!servo_D0.isEnabled())
+        servo_D0.enable();
+    // command the servos
+    servo_D0.setPulseWidth(servo_input);
+    // calculate inputs for the servos for the next cycle
+    if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
+        (servo_counter % loops_per_seconds ==
+         0) &&                // true if servo_counter is a multiple of loops_per_second
+        (servo_counter != 0)) // avoid servo_counter = 0
+        servo_input += 0.005f;
+    servo_counter++;
+}
 void toggle_do_execute_main_fcn()
 {
     // toggle do_execute_main_task if the button was pressed
