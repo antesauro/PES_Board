@@ -209,7 +209,6 @@ int main()
 
                 // command the servos
                 servo_D0.setPulseWidth(steering_command);
-                printf("Steering command: %f\n", steering_command);
                 // calculate inputs for the servos for the next cycle
                 if ((servo_input > 0.0f && servo_input < 1.0f) && // constrain servo_input to be < 1.0f
                     (servo_counter % loops_per_seconds ==
