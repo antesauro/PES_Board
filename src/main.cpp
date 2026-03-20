@@ -6,6 +6,7 @@
 #include "PESBoardPinMap.h"
 
 // drivers
+#include "ColorSensor.h"
 #include "DebounceIn.h"
 #include "FastPWM.h"
 #include "PIDCntrl.h"
@@ -93,6 +94,20 @@ int main()
     // min and max ultrasonic sensor reading, (us_distance_min, us_distance_max) -> (servo_min, servo_max)
     float us_distance_min = 6.0f;
     float us_distance_max = 40.0f;
+
+    // Color Sensor
+    float color_raw_Hz[4] = {
+        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the measurement of the color sensor (in Hz)
+    float color_avg_Hz[4] = {
+        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the average measurement of the color sensor (in Hz)
+    float color_cal[4] = {
+        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the calibrated measurement of the color sensor
+
+    int color_num =
+        0.0f; // define a variable to store the color number, e.g. 0 for red, 1 for green, 2 for blue, 3 for clear
+    const char *color_string; // define a variable to store the color string, e.g. "red", "green", "blue", "clear"
+    // TCS3200 color sensor
+    ColorSensor Color_Sensor(PB_3); // creates instance of ColorSensor object with PwmIn at PB_3
 
     /* MOTOR OBJECTS*/
 
@@ -223,6 +238,39 @@ int main()
                 servo_counter++;
 
                 printf("Pulse width: %f \n", servo_input);
+
+                // read the raw color measurement (in Hz) and store it in the defined variable
+                for (int i = 0; i < 4; i++) {
+                    color_raw_Hz[i] = Color_Sensor.readRawColor()[i]; // read the raw color measurement in Hz
+                }
+
+                // read the average color measurement (in Hz) and store it in the defined variable
+                for (int i = 0; i < 4; i++) {
+                    color_avg_Hz[i] = Color_Sensor.readColor()[i]; // read the average color measurement in Hz
+                }
+
+                // read the calibrated color measurement (unitless) and store it in the defined variable
+                for (int i = 0; i < 4; i++) {
+                    color_cal[i] = Color_Sensor.readColorCalib()[i];
+                }
+
+                // read the classified color number and store it in the defined variable
+                color_num = Color_Sensor.getColor();
+
+                // read the classified color string and store it in the defined variable
+                color_string = Color_Sensor.getColorString(color_num);
+
+                // printf("Color Raw Hz: %f %f %f %f\n", color_raw_Hz[0], color_raw_Hz[1], color_raw_Hz[2],
+                // color_raw_Hz[3]); // uncomment to print raw color measurement in Hz
+                printf("Color Avg Hz: %f %f %f %f\n",
+                       color_avg_Hz[0],
+                       color_avg_Hz[1],
+                       color_avg_Hz[2],
+                       color_avg_Hz[3]); // uncomment to print average color measurement in Hz (used for calibration and
+                                         // color classification)
+                // printf("Color Num: %d Color %s\n", color_num, color_string); // uncomment to print classified color
+                // number and string. careful: filters delay also delays the color classification, so the first few
+                // readings after switching the color sensor might be wrong until the filters are settled
 
                 if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions
                                                               // to the pickup state
