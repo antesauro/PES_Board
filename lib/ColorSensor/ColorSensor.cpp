@@ -313,7 +313,7 @@ int ColorSensor::getColor()
 
     // Hue boundaries
     const float H_RED_MAX_1   = 20.0f;
-    const float H_YELLOW_MAX  = 65.0f;
+    const float H_YELLOW_MAX  = 90.0f;
     const float H_GREEN_MAX   = 170.0f;
     const float H_CYAN_MAX    = 210.0f;
     const float H_BLUE_MAX    = 240.0f;
@@ -323,6 +323,11 @@ int ColorSensor::getColor()
     const float MAG_RG_MIN = 2.5f;  // magenta r0/g0 ~4.5, blue r0/g0 ~0.5
     const float MAG_BG_MIN = 1.2f;  // ensure blue is present (magenta b0/g0 ~1.9)
     const float MAG_RB_MAX = 3.8f;  // keep pure red out (red r0/b0 ~5.6, magenta ~2.4)
+
+    // Yellow override thresholds
+    const float YEL_RB_MIN = 1.20f;      // red must be clearly above blue
+    const float YEL_GB_MIN = 1.20f;      // green must be clearly above blue
+    const float YEL_RG_DIFF_MAX = 0.45f; // red/green should be relatively close
 
     const int STABLE_COUNT = 3;
 
@@ -361,6 +366,14 @@ int ColorSensor::getColor()
         if (rg > MAG_RG_MIN && bg > MAG_BG_MIN && rb < MAG_RB_MAX) {
             candidate = 8; // MAGENTA
         } else {
+            // Yellow: red and green both dominate blue, and are not too far apart.
+            const float rb_y = r0 / std::max(b0, eps);
+            const float gb_y = g0 / std::max(b0, eps);
+            const float rg_diff = std::fabs(r0 - g0) / std::max(r0 + g0, eps);
+
+            if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_diff < YEL_RG_DIFF_MAX) {
+                candidate = 4; // YELLOW
+            } else {
             // Safe normalization for hue
             float r = r0 / std::max(mx0, eps);
             float g = g0 / std::max(mx0, eps);
@@ -386,6 +399,7 @@ int ColorSensor::getColor()
                 else if (h <= H_CYAN_MAX)                   candidate = 6; // CYAN
                 else if (h <= H_BLUE_MAX)                   candidate = 7; // BLUE
                 else                                        candidate = 8; // MAGENTA
+            }
             }
         }
 

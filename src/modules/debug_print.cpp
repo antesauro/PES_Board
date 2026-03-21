@@ -56,7 +56,8 @@ void printEmergencyState()
 void printDriveStatus(ColorSensorModule& color_sensor_module)
 {
 #if DEBUG_PRINT_ENABLE
-    color_sensor_module.printAverage();
+    color_sensor_module.printColor();
+    // color_sensor_module.printAverage();
 #else
     (void)color_sensor_module;
 #endif

@@ -7,7 +7,9 @@ class ColorSensorModule
 public:
     ColorSensorModule();
 
+    void calibrate();
     void update();
+    void printColor();
     void printAverage() const;
 
 private:

@@ -94,6 +94,7 @@ int main()
                 motor_module.initialize();
                 servo_module.initialize();
                 servo_module.center();
+                color_sensor_module.update();
 
                 robot_state = RobotState::READY;
                 break;
@@ -150,6 +151,7 @@ int main()
                     printDeliveryHouseDistanceMm(DELIVERY_HOUSE_DISTANCE_MM);
                     // robot_state = RobotState::DELIVER;
                 }
+                robot_state = RobotState::READY;
                 break;
             }
 
