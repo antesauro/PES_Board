@@ -127,6 +127,20 @@ public:
      * Update them if you change any of those conditions.
      */
     void setCalibration();
+    /**
+     * @brief Set custom calibration values programmatically.
+     *
+     * @param r_black Red channel frequency (Hz) on black reference surface
+     * @param g_black Green channel frequency (Hz) on black reference surface
+     * @param b_black Blue channel frequency (Hz) on black reference surface
+     * @param c_black Clear channel frequency (Hz) on black reference surface
+     * @param r_white Red channel frequency (Hz) on white reference surface
+     * @param g_white Green channel frequency (Hz) on white reference surface
+     * @param b_white Blue channel frequency (Hz) on white reference surface
+     * @param c_white Clear channel frequency (Hz) on white reference surface
+     */
+    void setCustomCalibration(float r_black, float g_black, float b_black, float c_black,
+                             float r_white, float g_white, float b_white, float c_white);
     /** @brief Turn the illumination LED on/off (if wired). */
     void switchLed(ledstate_t led_state);
 

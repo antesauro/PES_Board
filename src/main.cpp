@@ -1,49 +1,19 @@
-#include <math.h>
-
 #include "mbed.h"
 
 // pes board pin map
 #include "PESBoardPinMap.h"
 
 // drivers
-#include "ColorSensor.h"
 #include "DebounceIn.h"
-#include "FastPWM.h"
-#include "PIDCntrl.h"
-#include "SensorBar.h"
-#include "Servo.h"
-#include "UltrasonicSensor.h"
+#include "modules/color_sensor_module.h"
+#include "modules/debug_print.h"
+#include "modules/line_array_module.h"
+#include "modules/motor_module.h"
+#include "modules/servo_module.h"
+#include "modules/ultrasonic_module.h"
 
-/* LINE FOLLOWER PART*/
-// constants for line follower
-static constexpr float GOOD_POSITION = 0.0f;
-static constexpr float STEERING_CENTER = 0.5f;
-static constexpr float DRIVE_VOLTAGE_FULL_POWER = 12.0f;
-static constexpr float STEERING_MIN = 0.01f;
-static constexpr float STEERING_MAX = 0.99f;
-static constexpr float PID_KP = -0.0035f;
-static constexpr float PID_KI = 0.0f;
-static constexpr float PID_KD = 0.0f;
-static constexpr float PID_DT_SECONDS = 0.020f;
-// sensor bar constants
-static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
-static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
-static constexpr int LINE_EVENT_PICKUP_HOUSE = 1;
-static constexpr int LINE_EVENT_DELIVERY_HOUSE = 2;
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
-static float steering_command;
-// variables for ultrasonic sensor   
-static constexpr float us_distance_min = 6.0f;
-static constexpr float us_distance_max = 40.0f;
-
-// Forward-declaration so the function can be called from within main()
-uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller);
-
-// Forward-declaration so the function can be called from within main()
-void ultrasonic_sensor_read_and_update(UltrasonicSensor &us_sensor, float &us_distance_cm, float us_distance_min, float us_distance_max);
-// Forward-declaration so the function can be called from within main()
-void sevo_calibration(Servo &servo_D0, float &servo_input, int &servo_counter, int loops_per_seconds);
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -60,21 +30,14 @@ int main()
 {
     // while loop gets executed every main_task_period_ms milliseconds, this is a
     // simple approach to repeatedly execute main
-    const int main_task_period_ms = 50; // define main task period time in ms e.g. 20 ms, therefore
-                                        // the main task will run 50 times per second
-    Timer main_task_timer;              // create Timer object which we use to run the main task
-                                        // every main_task_period_ms
+    const int main_task_period_ms = 20;  // main loop period in ms (50 Hz)
+    const int print_period_ms     = 250; // print interval in ms
+    Timer main_task_timer;
 
     /* INPUT OBJECTS*/
 
     // attach button fall function address to user button object
     user_button.fall(&toggle_do_execute_main_fcn);
-
-    // Mechanical Button for emergency reset
-    DigitalIn mechanical_button(PC_5); // create DigitalIn object to evaluate mechanical button, you
-                                       // need to specify the mode for proper usage, see below
-    mechanical_button.mode(PullUp);    // sets pullup between pin and 3.3 V, so that there
-                                       // is a defined potential
 
     /* OUTPUT OBJECTS*/
     // led on nucleo board
@@ -87,60 +50,15 @@ int main()
 
     // --- adding variables and objects and applying functions starts here ---
 
-    /* SENSOR OBJECTS*/
-    // sensor bar and PID controller for line following
-    SensorBar sensor_bar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false);
-    sensor_bar.clearInvertBits();
-    sensor_bar.clearBarStrobe();
-    PIDCntrl pid_controller(
-        PID_KP, PID_KI, PID_KD, PID_DT_SECONDS, STEERING_MIN - STEERING_CENTER, STEERING_MAX - STEERING_CENTER);
+    /* MODULE OBJECTS*/
+    LineArrayModule line_array_module;
+    UltrasonicModule ultrasonic_module;
+    ColorSensorModule color_sensor_module;
+    ServoModule servo_module;
+    MotorModule motor_module;
 
-    // Ultrasonic Sensor part
-    UltrasonicSensor us_sensor(PB_D3);
-
-    // Color Sensor
-    float color_raw_Hz[4] = {
-        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the measurement of the color sensor (in Hz)
-    float color_avg_Hz[4] = {
-        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the average measurement of the color sensor (in Hz)
-    float color_cal[4] = {
-        0.0f, 0.0f, 0.0f, 0.0f}; // define an array to store the calibrated measurement of the color sensor
-
-    int color_num =
-        0.0f; // define a variable to store the color number, e.g. 0 for red, 1 for green, 2 for blue, 3 for clear
-    const char *color_string; // define a variable to store the color string, e.g. "red", "green", "blue", "clear"
-    // TCS3200 color sensor
-    ColorSensor Color_Sensor(PB_3); // creates instance of ColorSensor object with PwmIn at PB_3
-
-    /* MOTOR OBJECTS*/
-
-    // Servo Objects in order to control the correct pins
-
-    Servo servo_D0(PB_D0); // Steering servo Object
-    // minimal pulse width and maximal pulse width obtained from the servo calibration process
-    // futuba S3003 STEERING SERVO
-    float servo_D0_ang_min = 0.035f; // careful, these values might differ from servo to servo
-    float servo_D0_ang_max = 0.110f;
-    // servo.setPulseWidth: before calibration (0,1) -> (min pwm, max pwm)
-    // servo.setPulseWidth: after calibration (0,1) -> (servo_D0_ang_min, servo_D0_ang_max)
-    servo_D0.calibratePulseMinMax(servo_D0_ang_min, servo_D0_ang_max);
-    // default acceleration of the servo motion profile is 1.0e6f
-    servo_D0.setMaxAcceleration(0.4f);
-
-    float servo_input = 0.0f;
-    int servo_counter = 0; // define servo counter, this is an additional variable variable to command the servo
-
-    // reely S0090 CRANE SERVO
-    // float servo_D1_ang_min = 0.0350f;
-    // float servo_D1_ang_max = 0.1150f;
-
-    // Servo loop time
-    const int loops_per_seconds = static_cast<int>(ceilf(1.0f / (0.001f * static_cast<float>(main_task_period_ms))));
-
-    // object to enable power electronics for the DC motors
-    DigitalOut enable_motors(PB_ENABLE_DCMOTORS);
-
-    FastPWM pwm_M1(PB_PWM_M1); // fastPWM obcject for the main drive motor
+    int print_cycle_counter = 0;
+    const int print_cycle_divider = print_period_ms / main_task_period_ms;
 
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
@@ -166,25 +84,22 @@ int main()
     while (!toggle_emergency) {
         main_task_timer.reset();
 
-        // read ultrasonic sensor and update distance
-        float us_distance_cm = 0.0f;
-        ultrasonic_sensor_read_and_update(us_sensor, us_distance_cm, us_distance_min, us_distance_max);
+        ultrasonic_module.update();
 
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
-                printf("INITIAL\n");
+                printInitialState();
 
-                // enable hardwaredriver DC motors: 0 -> disabled, 1 -> enabled
-                enable_motors = 1;
-                if (!servo_D0.isEnabled())
-                    servo_D0.enable();
+                motor_module.initialize();
+                servo_module.initialize();
+                servo_module.center();
 
                 robot_state = RobotState::READY;
                 break;
 
             case RobotState::READY:
-                printf("READY\n");
+                printReadyState();
 
                 if (do_execute_main_task) {
                     robot_state = RobotState::DRIVE;
@@ -197,8 +112,9 @@ int main()
                         // --- variables and objects that should be reset go here ---
                         // reset variables and objects
                         robot_state = RobotState::INITIAL;
-                        servo_D0.disable();
-                        servo_input = 0.0f;
+                        servo_module.disable();
+                        motor_module.disable();
+                        ultrasonic_module.reset();
                         led1 = 0;
                     }
                 }
@@ -206,86 +122,61 @@ int main()
                 break;
 
             case RobotState::DRIVE: {
-                printf("DRIVE\n");
-                const int action_code = run_follow_line_fcn(
-                    sensor_bar,
-                    pid_controller); // run line following function and get action code for state transitions
+                const bool do_print = (print_cycle_counter == 0);
+                const uint8_t action_code = line_array_module.update(do_print);
 
-                pwm_M1.write(0.65f);
+                // Scale drive velocity by line deviation (0..max_rps).
+                // driveVoltage() returns 0..12 V; divide by VOLTAGE_MAX to get
+                // a 0..1 scale, then multiply by the chosen top speed in rps.
+                static constexpr float DRIVE_MAX_RPS = 1.5f; // tune as needed
+                const float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                servo_module.setSteeringAngle(line_array_module.steeringCommand());
 
-                // command the servos
-                servo_D0.setPulseWidth(steering_command);
-            
+                color_sensor_module.update();
 
-                printf("Pulse width: %f \n", servo_input);
-
-                // read the raw color measurement (in Hz) and store it in the defined variable
-                for (int i = 0; i < 4; i++) {
-                    color_raw_Hz[i] = Color_Sensor.readRawColor()[i]; // read the raw color measurement in Hz
+                if (do_print) {
+                    printDriveStatus(color_sensor_module);
                 }
 
-                // read the average color measurement (in Hz) and store it in the defined variable
-                for (int i = 0; i < 4; i++) {
-                    color_avg_Hz[i] = Color_Sensor.readColor()[i]; // read the average color measurement in Hz
-                }
+                print_cycle_counter++;
+                if (print_cycle_counter >= print_cycle_divider)
+                    print_cycle_counter = 0;
 
-                // read the calibrated color measurement (unitless) and store it in the defined variable
-                for (int i = 0; i < 4; i++) {
-                    color_cal[i] = Color_Sensor.readColorCalib()[i];
-                }
-
-                // read the classified color number and store it in the defined variable
-                color_num = Color_Sensor.getColor();
-
-                // read the classified color string and store it in the defined variable
-                color_string = Color_Sensor.getColorString(color_num);
-
-                // printf("Color Raw Hz: %f %f %f %f\n", color_raw_Hz[0], color_raw_Hz[1], color_raw_Hz[2],
-                // color_raw_Hz[3]); // uncomment to print raw color measurement in Hz
-                printf("Color Avg Hz: %f %f %f %f\n",
-                       color_avg_Hz[0],
-                       color_avg_Hz[1],
-                       color_avg_Hz[2],
-                       color_avg_Hz[3]); // uncomment to print average color measurement in Hz (used for calibration and
-                                         // color classification)
-                // printf("Color Num: %d Color %s\n", color_num, color_string); // uncomment to print classified color
-                // number and string. careful: filters delay also delays the color classification, so the first few
-                // readings after switching the color sensor might be wrong until the filters are settled
-
-                if (action_code == LINE_EVENT_PICKUP_HOUSE) { // if the robot detects the pickup house, it transitions
-                                                              // to the pickup state
-                    printf("Querlinie Abhol-Haus: %d mm\n", PICKUP_HOUSE_DISTANCE_MM);
+                if (action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
+                    printPickupHouseDistanceMm(PICKUP_HOUSE_DISTANCE_MM);
                     // robot_state = RobotState::PICKUP;
-                } else if (action_code == LINE_EVENT_DELIVERY_HOUSE) { // if the robot detects the delivery house, it
-                                                                       // transitions to the delivery state
-                    printf("Querlinie Abliefer-Haus: %d mm\n", DELIVERY_HOUSE_DISTANCE_MM);
-                    //// robot_state = RobotState::DELIVER;
+                } else if (action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
+                    printDeliveryHouseDistanceMm(DELIVERY_HOUSE_DISTANCE_MM);
+                    // robot_state = RobotState::DELIVER;
                 }
                 break;
             }
 
             case RobotState::RETRIEVE:
-                printf("RETRIEVE\n");
+                printRetrieveState();
 
                 break;
 
             case RobotState::PICKUP:
-                printf("PICKUP\n");
+                printPickupState();
 
                 break;
 
             case RobotState::DELIVER:
-                printf("DELIVER\n");
+                printDeliverState();
 
                 break;
 
             case RobotState::SLEEP:
-                printf("SLEEP\n");
+                printSleepState();
 
                 break;
 
             case RobotState::EMERGENCY:
-                printf("EMERGENCY\n");
+                printEmergencyState();
+                motor_module.disable();
+                servo_module.disable();
                 // the transition to the emergency state causes the execution of the commands contained
                 // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
                 // reset
@@ -301,63 +192,17 @@ int main()
 
         // --- code that runs every cycle at the end goes here ---
 
+        // printf("US Sensor in cm: %f\n", ultrasonic_module.distanceCm());
+
         // read timer and make the main thread sleep for the remaining time span (non blocking)
         int main_task_elapsed_time_ms = duration_cast<milliseconds>(main_task_timer.elapsed_time()).count();
         if (main_task_period_ms - main_task_elapsed_time_ms < 0)
-            printf("Warning: Main task took longer than main_task_period_ms\n");
+            printMainLoopOverrunWarning();
         else
             thread_sleep_for(main_task_period_ms - main_task_elapsed_time_ms);
     }
 }
 
-uint8_t run_follow_line_fcn(SensorBar &sensor_bar, PIDCntrl &pid_controller)
-{
-    sensor_bar.update();
-    const uint8_t raw = sensor_bar.getRaw();
-    const bool line_detected = sensor_bar.isAnyLedActive();
-    const int8_t position = line_detected ? sensor_bar.getBinaryPosition() : 0;
-    const float error = line_detected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
-    // action code: 0 -> no event, 1 -> pickup house detected, 2 -> delivery house detected
-    uint8_t action_code = 0;
-    if (raw == SENSOR_MASK_ALL_BITS)
-        action_code = LINE_EVENT_DELIVERY_HOUSE;
-    else if (raw == SENSOR_MASK_B2_TO_B5)
-        action_code = LINE_EVENT_PICKUP_HOUSE;
-    // calculate steering command with PID controller
-    steering_command = STEERING_CENTER - pid_controller.update(error);
-
-    if (!line_detected) {
-        pid_controller.reset();
-        steering_command = STEERING_CENTER;
-    }
-
-    return action_code;
-}
-// implement the calibration process for the ultrasonic sensor here, e.g. by comparing the ultrasonic sensor readings with measurements from a reference device to find the gain and offset
-void ultrasonic_sensor_read_and_update(UltrasonicSensor &us_sensor, float &us_distance_cm, float us_distance_min, float us_distance_max){
-
-    // read us sensor distance, only valid measurements will update us_distance_cm
-    const float us_distance_cm_candidate = us_sensor.read();
-    if (us_distance_cm_candidate > us_distance_min && us_distance_cm_candidate < us_distance_max)
-        us_distance_cm = us_distance_cm_candidate;
-        return;
-}
-
-void sevo_calibration(Servo &servo_D0, float &servo_input, int &servo_counter, int loops_per_seconds){
-    /* FOR SERVO CALIBRATION PROCESS ONLY*/
-    printf("pulse width: %f\n", servo_input);
-    if (!servo_D0.isEnabled())
-        servo_D0.enable();
-    // command the servos
-    servo_D0.setPulseWidth(servo_input);
-    // calculate inputs for the servos for the next cycle
-    if ((servo_input < 1.0f) && // constrain servo_input to be < 1.0f
-        (servo_counter % loops_per_seconds ==
-         0) &&                // true if servo_counter is a multiple of loops_per_second
-        (servo_counter != 0)) // avoid servo_counter = 0
-        servo_input += 0.005f;
-    servo_counter++;
-}
 void toggle_do_execute_main_fcn()
 {
     // toggle do_execute_main_task if the button was pressed

@@ -139,6 +139,44 @@ void ColorSensor::setCalibration()
 }
 
 /**
+ * @brief Set custom calibration values programmatically.
+ */
+void ColorSensor::setCustomCalibration(float r_black, float g_black, float b_black, float c_black,
+                                       float r_white, float g_white, float b_white, float c_white)
+{
+    m_reference_black.red = r_black;
+    m_reference_black.green = g_black;
+    m_reference_black.blue = b_black;
+    m_reference_black.white = c_black;
+
+    m_reference_white.red = r_white;
+    m_reference_white.green = g_white;
+    m_reference_white.blue = b_white;
+    m_reference_white.white = c_white;
+
+    m_calib_black[0] = r_black;
+    m_calib_black[1] = g_black;
+    m_calib_black[2] = b_black;
+    m_calib_black[3] = c_black;
+
+    m_calib_white[0] = r_white;
+    m_calib_white[1] = g_white;
+    m_calib_white[2] = b_white;
+    m_calib_white[3] = c_white;
+
+    const float eps = 1e-3f;
+    float denom = (m_calib_white[3] - m_calib_black[3]);
+    if (denom < eps) {
+        return;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        m_ratio[i] = (m_calib_white[i] - m_calib_black[i]) / denom;
+        if (m_ratio[i] < eps) m_ratio[i] = eps;
+    }
+}
+
+/**
  * @brief Select the photodiode filter via S2/S3.
  *
  * colorfilter_t values encode the required bit pattern (see header).

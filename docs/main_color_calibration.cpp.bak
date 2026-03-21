@@ -1,0 +1,91 @@
+/**
+ * @file main_color_calibration.cpp
+ * @brief Simple color sensor calibration utility.
+ * 
+ * Instructions:
+ * 1. Compile and upload this file (rename to main.cpp or compile as an option)
+ * 2. Hold the sensor ~2 cm above a WHITE surface and let it stabilize (10-20 seconds)
+ * 3. Record the 4 printed values (R, G, B, Clear) as white calibration
+ * 4. Switch to a BLACK surface and wait another 10-20 seconds
+ * 5. Record the 4 printed values (R, G, B, Clear) as black calibration
+ * 6. Enter these 8 values into ColorSensor::setCalibration() in ColorSensor.cpp
+ * 7. Recompile and upload the main program
+ */
+
+#include "mbed.h"
+#include "PESBoardPinMap.h"
+#include "ColorSensor.h"
+#include <cstdio>
+#include <thread>
+
+int main()
+{
+    printf("\n=== Color Sensor Calibration ===\n");
+    printf("Creating sensor on pin PB_3...\n");
+    
+    // Create color sensor with default pins
+    ColorSensor sensor(PB_3);
+    
+    printf("\nWaiting for sensor to initialize...\n");
+    ThisThread::sleep_for(1s);
+    
+    printf("\n--- STEP 1: WHITE CALIBRATION ---\n");
+    printf("Hold sensor ~2 cm above WHITE surface.\n");
+    printf("Waiting 15 seconds for stabilization...\n");
+    
+    for (int i = 15; i > 0; i--) {
+        printf("  %2d seconds remaining...\n", i);
+        ThisThread::sleep_for(1s);
+    }
+    
+    const float* white_raw = sensor.readRawColor();
+    printf("\n[WHITE] Reference values (R, G, B, Clear):\n");
+    printf("  Red:   %.1f Hz\n", white_raw[0]);
+    printf("  Green: %.1f Hz\n", white_raw[1]);
+    printf("  Blue:  %.1f Hz\n", white_raw[2]);
+    printf("  Clear: %.1f Hz\n", white_raw[3]);
+    
+    float white_r = white_raw[0];
+    float white_g = white_raw[1];
+    float white_b = white_raw[2];
+    float white_c = white_raw[3];
+    
+    printf("\n--- STEP 2: BLACK CALIBRATION ---\n");
+    printf("Switch to BLACK surface.\n");
+    printf("Waiting 15 seconds for stabilization...\n");
+    
+    for (int i = 15; i > 0; i--) {
+        printf("  %2d seconds remaining...\n", i);
+        ThisThread::sleep_for(1s);
+    }
+    
+    const float* black_raw = sensor.readRawColor();
+    printf("\n[BLACK] Reference values (R, G, B, Clear):\n");
+    printf("  Red:   %.1f Hz\n", black_raw[0]);
+    printf("  Green: %.1f Hz\n", black_raw[1]);
+    printf("  Blue:  %.1f Hz\n", black_raw[2]);
+    printf("  Clear: %.1f Hz\n", black_raw[3]);
+    
+    float black_r = black_raw[0];
+    float black_g = black_raw[1];
+    float black_b = black_raw[2];
+    float black_c = black_raw[3];
+    
+    // Apply calibration to sensor immediately
+    sensor.setCustomCalibration(black_r, black_g, black_b, black_c,
+                               white_r, white_g, white_b, white_c);
+    
+    printf("\n=== CALIBRATION APPLIED SUCCESSFULLY ===\n");
+    printf("\nThe sensor is now calibrated and ready to use.\n");
+    printf("Recompile and upload main.cpp to use the calibrated sensor.\n\n");
+    
+    // Continuous loop to keep sensor running and show live measurements
+    int count = 0;
+    while (true) {
+        ThisThread::sleep_for(500ms);
+        const float* raw = sensor.readRawColor();
+        count++;
+        printf("[%3d] R:%.1f  G:%.1f  B:%.1f  C:%.1f\n", 
+               count, raw[0], raw[1], raw[2], raw[3]);
+    }
+}
