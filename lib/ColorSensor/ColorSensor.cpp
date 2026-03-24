@@ -311,18 +311,11 @@ int ColorSensor::getColor()
     const float SATP_GRAY_MAX  = 0.08f;   // below => neutral
     const float SATP_COLOR_MIN = 0.12f;   // below => treat as unknown/neutral
 
-    // Hue boundaries
-    const float H_RED_MAX_1   = 20.0f;
+    // Hue boundaries (simplified for R, G, B, Y only)
+    const float H_RED_MAX     = 30.0f;
     const float H_YELLOW_MAX  = 90.0f;
-    const float H_GREEN_MAX   = 170.0f;
-    const float H_CYAN_MAX    = 210.0f;
-    const float H_BLUE_MAX    = 240.0f;
-    const float H_MAGENTA_MIN = 345.0f;
-
-    // Magenta override thresholds (tuned from your logs)
-    const float MAG_RG_MIN = 2.5f;  // magenta r0/g0 ~4.5, blue r0/g0 ~0.5
-    const float MAG_BG_MIN = 1.2f;  // ensure blue is present (magenta b0/g0 ~1.9)
-    const float MAG_RB_MAX = 3.8f;  // keep pure red out (red r0/b0 ~5.6, magenta ~2.4)
+    const float H_GREEN_MAX   = 150.0f;
+    const float H_BLUE_MAX    = 270.0f;
 
     // Yellow override thresholds
     const float YEL_RB_MIN = 1.20f;      // red must be clearly above blue
@@ -356,24 +349,15 @@ int ColorSensor::getColor()
         candidate = 0; // UNKNOWN
     }
     else {
-        // ---- MAGENTA OVERRIDE (before HSV hue) ----
-        // Use ratios in calibrated space; these are stable and separate your clusters well.
-        const float rg = r0 / std::max(g0, eps);
-        const float bg = b0 / std::max(g0, eps);
-        const float rb = r0 / std::max(b0, eps);
+        // ---- YELLOW DETECTION (before HSV hue) ----
+        // Yellow: red and green both dominate blue, and are not too far apart.
+        const float rb_y = r0 / std::max(b0, eps);
+        const float gb_y = g0 / std::max(b0, eps);
+        const float rg_diff = std::fabs(r0 - g0) / std::max(r0 + g0, eps);
 
-        // Magenta: strong red, meaningful blue, low green; but not "pure red" (rb too large).
-        if (rg > MAG_RG_MIN && bg > MAG_BG_MIN && rb < MAG_RB_MAX) {
-            candidate = 8; // MAGENTA
+        if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_diff < YEL_RG_DIFF_MAX) {
+            candidate = 4; // YELLOW
         } else {
-            // Yellow: red and green both dominate blue, and are not too far apart.
-            const float rb_y = r0 / std::max(b0, eps);
-            const float gb_y = g0 / std::max(b0, eps);
-            const float rg_diff = std::fabs(r0 - g0) / std::max(r0 + g0, eps);
-
-            if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_diff < YEL_RG_DIFF_MAX) {
-                candidate = 4; // YELLOW
-            } else {
             // Safe normalization for hue
             float r = r0 / std::max(mx0, eps);
             float g = g0 / std::max(mx0, eps);
@@ -393,13 +377,12 @@ int ColorSensor::getColor()
                 else                h = 60.0f * (((r - g) / delta) + 4.0f);
                 if (h < 0.0f) h += 360.0f;
 
-                if (h <= H_RED_MAX_1 || h >= H_MAGENTA_MIN) candidate = 3; // RED
-                else if (h <= H_YELLOW_MAX)                 candidate = 4; // YELLOW
-                else if (h <= H_GREEN_MAX)                  candidate = 5; // GREEN
-                else if (h <= H_CYAN_MAX)                   candidate = 6; // CYAN
-                else if (h <= H_BLUE_MAX)                   candidate = 7; // BLUE
-                else                                        candidate = 8; // MAGENTA
-            }
+                // Simplified classification: RED, GREEN, BLUE only
+                if (h <= H_RED_MAX || h >= 330.0f)  candidate = 3; // RED
+                else if (h <= H_YELLOW_MAX)         candidate = 4; // YELLOW
+                else if (h <= H_GREEN_MAX)          candidate = 5; // GREEN
+                else if (h <= H_BLUE_MAX)           candidate = 7; // BLUE
+                else                                candidate = 0; // UNKNOWN
             }
         }
 
