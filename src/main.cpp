@@ -127,7 +127,6 @@ int main()
                 const uint8_t action_code = line_array_module.update(do_print);
 
                 // Scale drive velocity by line deviation (0..max_rps).
-                // driveVoltage() returns 0..12 V; divide by VOLTAGE_MAX to get
                 // a 0..1 scale, then multiply by the chosen top speed in rps.
                 static constexpr float DRIVE_MAX_RPS = 1.5f; // tune as needed
                 const float drive_scale = line_array_module.driveVoltage() / 12.0f;
@@ -151,7 +150,6 @@ int main()
                     printDeliveryHouseDistanceMm(DELIVERY_HOUSE_DISTANCE_MM);
                     // robot_state = RobotState::DELIVER;
                 }
-                robot_state = RobotState::READY;
                 break;
             }
 
