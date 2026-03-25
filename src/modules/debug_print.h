@@ -7,7 +7,7 @@ class ColorSensorModule;
 
 // Zentrale Schaltstelle für Debug-Ausgaben.
 // 0 = alle Ausgaben aus, 1 = Ausgaben an.
-#define DEBUG_PRINT_ENABLE 1
+#define DEBUG_PRINT_ENABLE 0
 
 void printInitialState();
 void printReadyState();
