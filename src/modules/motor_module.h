@@ -41,6 +41,7 @@ public:
     void disable();
 
 private:
+// Physical parameters for the motor on M1:
     static constexpr float GEAR_RATIO   = 78.125f;
     static constexpr float KN           = 180.0f / 12.0f; // rpm/V
     static constexpr float VOLTAGE_MAX  = 12.0f;

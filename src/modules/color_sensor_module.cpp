@@ -4,7 +4,7 @@
 #include "debug_print.h"
 #include "mbed.h"
 
-// Calibration values measured at ~2 cm distance with sensor LED on
+// Calibration values measured at 4 cm distance with sensor LED on
 // Black reference: Color Avg Hz: 2790 2823 4405 11136
 // White reference: Color Avg Hz: 5767 4938 7711 14064
 static constexpr float CALIB_BLACK_R = 2790.0f;

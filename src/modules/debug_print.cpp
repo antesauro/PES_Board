@@ -96,15 +96,15 @@ void printLineArrayDebug(uint8_t raw,
                          uint8_t event_code)
 {
 #if DEBUG_PRINT_ENABLE
-    // for (int bit = 7; bit >= 0; bit--)
-    //     printf("%d", (raw >> bit) & 0x01);
+     for (int bit = 7; bit >= 0; bit--)
+        printf("%d", (raw >> bit) & 0x01);
 
-    // printf(" pos=%d corr=%.2f servo=%.3f motor=%.2f event=%d\n",
-    //        position,
-    //        correction,
-    //        steering_command,
-    //        drive_voltage,
-    //        event_code);
+     printf(" pos=%d corr=%.2f servo=%.3f motor=%.2f event=%d\n",
+        position,
+        correction,
+        steering_command,
+        drive_voltage,
+        event_code);
 #else
     (void)raw;
     (void)position;
