@@ -17,9 +17,17 @@ static constexpr float PID_KP                 = -0.0012f; //steering correction 
 static constexpr float PID_KI                 = 0.0f;
 static constexpr float PID_KD                 = -0.0006f;
 static constexpr float PID_DT_SECONDS         = 0.020f;
+static constexpr float CORRECTION_DEADBAND    = 3.0f;
+static constexpr float CORRECTION_ALPHA       = 0.35f;
+static constexpr float STEERING_STEP_MAX      = 0.015f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
+
+float clampf(float value, float minValue, float maxValue)
+{
+    return (value < minValue) ? minValue : ((value > maxValue) ? maxValue : value);
+}
 }
 
 LineArrayModule::LineArrayModule() :
@@ -32,7 +40,8 @@ LineArrayModule::LineArrayModule() :
                     STEERING_MIN - STEERING_CENTER,
                     STEERING_MAX - STEERING_CENTER),
     m_steeringCommand(STEERING_CENTER),
-    m_driveVoltage(0.0f)
+    m_driveVoltage(0.0f),
+    m_filteredCorrection(0.0f)
 {
     m_sensorBar.clearInvertBits();
     m_sensorBar.clearBarStrobe();
@@ -45,7 +54,13 @@ uint8_t LineArrayModule::update(bool do_print)
     const uint8_t raw = m_sensorBar.getRaw();
     const bool lineDetected = m_sensorBar.isAnyLedActive();
     const int8_t position = lineDetected ? m_sensorBar.getBinaryPosition() : 0;
-    const float correction = lineDetected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
+    const float rawCorrection = lineDetected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
+
+    float correction = rawCorrection;
+    if (fabsf(correction) < CORRECTION_DEADBAND)
+        correction = 0.0f;
+
+    m_filteredCorrection += CORRECTION_ALPHA * (correction - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
     if (raw == SENSOR_MASK_ALL_BITS)
@@ -53,24 +68,27 @@ uint8_t LineArrayModule::update(bool do_print)
     else if (raw == SENSOR_MASK_B2_TO_B5)
         event = EVENT_PICKUP_HOUSE;
 
-    m_steeringCommand = STEERING_CENTER - m_pidController.update(correction);
+    const float steeringTarget = STEERING_CENTER - m_pidController.update(m_filteredCorrection);
+    const float steeringDelta = clampf(steeringTarget - m_steeringCommand, -STEERING_STEP_MAX, STEERING_STEP_MAX);
+    m_steeringCommand = clampf(m_steeringCommand + steeringDelta, STEERING_MIN, STEERING_MAX);
 
     // Scale drive voltage by how close to centre the line is
     float max_error = fmaxf(fabsf(MAX_POSITION - GOOD_POSITION), fabsf(MIN_POSITION - GOOD_POSITION));
     if (max_error < 1.0e-6f) max_error = 1.0f;
-    float drive_scale = 1.0f - fabsf(correction) / max_error;
+    float drive_scale = 1.0f - fabsf(m_filteredCorrection) / max_error;
     if (drive_scale < 0.0f) drive_scale = 0.0f;
     if (drive_scale > 1.0f) drive_scale = 1.0f;
     m_driveVoltage = DRIVE_VOLTAGE_FULL * drive_scale;
 
     if (!lineDetected) {
         m_pidController.reset();
+        m_filteredCorrection = 0.0f;
         m_steeringCommand = STEERING_CENTER;
         m_driveVoltage = 0.0f;
     }
 
     if (do_print)
-        printLineArrayDebug(raw, position, correction, m_steeringCommand, m_driveVoltage, event);
+        printLineArrayDebug(raw, position, m_filteredCorrection, m_steeringCommand, m_driveVoltage, event);
 
     return event;
 }

@@ -28,4 +28,5 @@ private:
     PIDCntrl m_pidController;
     float m_steeringCommand;
     float m_driveVoltage;
+    float m_filteredCorrection;
 };
