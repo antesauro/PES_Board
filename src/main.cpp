@@ -128,7 +128,7 @@ int main()
 
                 // Scale drive velocity by line deviation (0..max_rps).
                 // a 0..1 scale, then multiply by the chosen top speed in rps.
-                static constexpr float DRIVE_MAX_RPS = 1.5f; // tune as needed
+                static constexpr float DRIVE_MAX_RPS = 0.75f; // tune as needed max at 1.5
                 const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                 motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                 servo_module.setSteeringAngle(line_array_module.steeringCommand());

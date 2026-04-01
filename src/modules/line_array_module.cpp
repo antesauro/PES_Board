@@ -13,9 +13,9 @@ static constexpr float STEERING_CENTER        = 0.5f;
 static constexpr float STEERING_MIN           = 0.20f; //min servo position with 1.25  gear ration
 static constexpr float STEERING_MAX           = 0.8f;  //max servo position with 1.25  gear ration
 static constexpr float DRIVE_VOLTAGE_FULL     = 12.0f;
-static constexpr float PID_KP                 = -0.0020f; //steering correction strength (negative to steer in correct direction)
+static constexpr float PID_KP                 = -0.0012f; //steering correction strength (negative to steer in correct direction)
 static constexpr float PID_KI                 = 0.0f;
-static constexpr float PID_KD                 = 0.0f;
+static constexpr float PID_KD                 = -0.0006f;
 static constexpr float PID_DT_SECONDS         = 0.020f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
@@ -24,6 +24,7 @@ static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
 
 LineArrayModule::LineArrayModule() :
     m_sensorBar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false),
+
     m_pidController(PID_KP,
                     PID_KI,
                     PID_KD,
