@@ -6,17 +6,14 @@
 #include <cmath>
 
 namespace {
-static constexpr float GOOD_POSITION          = 0.0f;
-static constexpr float MIN_POSITION           = -127.0f;
-static constexpr float MAX_POSITION           = 127.0f;
 static constexpr float STEERING_CENTER        = 0.5f;
 static constexpr float STEERING_MIN           = 0.20f; //min servo position with 1.25  gear ration
 static constexpr float STEERING_MAX           = 0.8f;  //max servo position with 1.25  gear ration
 static constexpr float DRIVE_VOLTAGE_FULL     = 12.0f;
-static constexpr float PID_KP                 = -0.0012f; //steering correction strength (negative to steer in correct direction)
+static constexpr float PID_KP                 = -0.7f; //steering correction strength (negative to steer in correct direction)
 static constexpr float PID_KI                 = 0.0f;
-static constexpr float PID_KD                 = -0.0006f;
-static constexpr float PID_DT_SECONDS         = 0.020f;
+static constexpr float PID_KD                 = -0.9f;
+static constexpr float PID_DT_SECONDS         = 0.02f;// PID update interval in seconds, should match main loop period for best performance
 static constexpr float CORRECTION_DEADBAND    = 3.0f;
 static constexpr float CORRECTION_ALPHA       = 0.35f;
 static constexpr float STEERING_STEP_MAX      = 0.015f;
@@ -54,7 +51,7 @@ uint8_t LineArrayModule::update(bool do_print)
     const uint8_t raw = m_sensorBar.getRaw();
     const bool lineDetected = m_sensorBar.isAnyLedActive();
     const int8_t position = lineDetected ? m_sensorBar.getBinaryPosition() : 0;
-    const float rawCorrection = lineDetected ? (static_cast<float>(position) - GOOD_POSITION) : 0.0f;
+    const float rawCorrection = lineDetected ? (static_cast<float>(position) ) : 0.0f;
 
     float correction = rawCorrection;
     if (fabsf(correction) < CORRECTION_DEADBAND)
@@ -73,9 +70,8 @@ uint8_t LineArrayModule::update(bool do_print)
     m_steeringCommand = clampf(m_steeringCommand + steeringDelta, STEERING_MIN, STEERING_MAX);
 
     // Scale drive voltage by how close to centre the line is
-    float max_error = fmaxf(fabsf(MAX_POSITION - GOOD_POSITION), fabsf(MIN_POSITION - GOOD_POSITION));
-    if (max_error < 1.0e-6f) max_error = 1.0f;
-    float drive_scale = 1.0f - fabsf(m_filteredCorrection) / max_error;
+    const float max_error = 127.0f;
+    float drive_scale = 1.1f - fabsf(m_filteredCorrection) / max_error;
     if (drive_scale < 0.0f) drive_scale = 0.0f;
     if (drive_scale > 1.0f) drive_scale = 1.0f;
     m_driveVoltage = DRIVE_VOLTAGE_FULL * drive_scale;
