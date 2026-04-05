@@ -1,4 +1,4 @@
-#include "modules/motor_module.h"
+#include "motor_module.h"
 
 #include "PESBoardPinMap.h"
 

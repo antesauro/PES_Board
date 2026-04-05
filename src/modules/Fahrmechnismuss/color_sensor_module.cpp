@@ -1,4 +1,4 @@
-#include "modules/color_sensor_module.h"
+#include "color_sensor_module.h"
 
 #include "PESBoardPinMap.h"
 #include "debug_print.h"

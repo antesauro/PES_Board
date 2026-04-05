@@ -1,4 +1,4 @@
-#include "modules/servo_module.h"
+#include "servo_module.h"
 
 #include "PESBoardPinMap.h"
 

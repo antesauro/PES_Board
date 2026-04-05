@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "modules/color_sensor_module.h"
+#include "color_sensor_module.h"
 
 void printInitialState()
 {

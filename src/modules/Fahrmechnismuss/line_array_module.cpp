@@ -1,4 +1,4 @@
-#include "modules/line_array_module.h"
+#include "line_array_module.h"
 
 #include "PESBoardPinMap.h"
 #include "debug_print.h"
