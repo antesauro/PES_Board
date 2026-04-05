@@ -41,12 +41,35 @@ void ColorSensorModule::update()
 
 void ColorSensorModule::printColor()
 {
-    const int color_num = m_sensor.getColor();
-    const char* color_str = m_sensor.getColorString(color_num);
-    printf("Color: %s\n", color_str);
+    const int sensor_color_num = m_sensor.getColor();
+    const char* sensor_color_str = m_sensor.getColorString(sensor_color_num);
+    const int package_color_num = detectedPackageColor();
+
+    printf("Color sensor=%d (%s) package=%d\n",
+           sensor_color_num,
+           sensor_color_str,
+           package_color_num);
 }
 
 void ColorSensorModule::printAverage() const
 {
     printColorAverageHz(m_avgHz);
+}
+
+int ColorSensorModule::detectedPackageColor()
+{
+    const int color_num = m_sensor.getColor();
+
+    switch (color_num) {
+        case 3:
+            return 1; // RED
+        case 7:
+            return 2; // BLUE
+        case 4:
+            return 3; // YELLOW
+        case 5:
+            return 4; // GREEN
+        default:
+            return 0; // UNKNOWN / not one of the 4 target colors
+    }
 }

@@ -18,8 +18,10 @@ void ServoModule::initialize()
 {
     m_servoD0.calibratePulseMinMax(SERVO_D0_ANG_MIN, SERVO_D0_ANG_MAX);
     m_servoD0.setMaxAcceleration(1.0e6f);// no acceleration limit
-    if (!m_servoD0.isEnabled())
-        m_servoD0.enable();
+    if (!m_servoD0.isEnabled()) {
+        // Enable directly at center to avoid an initial jump to 0.0.
+        m_servoD0.enable(SERVO_CENTER_ANGLE);
+    }
 }
 
 void ServoModule::setSteeringAngle(float angle)

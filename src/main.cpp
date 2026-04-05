@@ -11,6 +11,9 @@
 #include "modules/motor_module.h"
 #include "modules/servo_module.h"
 #include "modules/ultrasonic_module.h"
+#include "modules/abladen_module.h"
+#include "modules/aufladen_module.h"
+#include "modules/lagern_module.h"
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
@@ -155,6 +158,7 @@ int main()
 
             case RobotState::RETRIEVE:
                 printRetrieveState();
+                
 
                 break;
 
