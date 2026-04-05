@@ -17,7 +17,7 @@ ServoModule::ServoModule() : m_servoD0(PB_D0)
 void ServoModule::initialize()
 {
     m_servoD0.calibratePulseMinMax(SERVO_D0_ANG_MIN, SERVO_D0_ANG_MAX);
-    m_servoD0.setMaxAcceleration(0.4f);
+    m_servoD0.setMaxAcceleration(1.0e6f);// no acceleration limit
     if (!m_servoD0.isEnabled())
         m_servoD0.enable();
 }
