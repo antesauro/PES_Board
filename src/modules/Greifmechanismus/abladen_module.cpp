@@ -14,3 +14,19 @@ int AbladenModule::belegtePlaetze() const
 {
 	return 0;
 }
+
+void AbladenModule::abladenRot()
+{
+}
+
+void AbladenModule::abladenBlau()
+{
+}
+
+void AbladenModule::abladenGelb()
+{
+}
+
+void AbladenModule::abladenGruen()
+{
+}

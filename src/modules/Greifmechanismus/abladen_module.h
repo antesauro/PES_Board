@@ -9,4 +9,9 @@ public:
 
 	bool auslagern(int farbe);
 	int belegtePlaetze() const;
+
+	void abladenRot();
+	void abladenBlau();
+	void abladenGelb();
+	void abladenGruen();
 };
