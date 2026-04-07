@@ -17,8 +17,8 @@ static constexpr float PID_DT_SECONDS         = 0.02f;// PID update interval in 
 static constexpr float CORRECTION_DEADBAND    = 1.0f;
 static constexpr float CORRECTION_ALPHA       = 0.35f;
 static constexpr float STEERING_STEP_MAX      = 0.015f;
-static constexpr float CENTER_HOLD_ENTER      = 2.0f;
-static constexpr float CENTER_HOLD_EXIT       = 4.0f;
+static constexpr float CENTER_HOLD_ENTER_DEFAULT = 11.0f;
+static constexpr float CENTER_HOLD_EXIT_DEFAULT  = 13.0f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
@@ -41,7 +41,9 @@ LineArrayModule::LineArrayModule() :
     m_steeringCommand(STEERING_CENTER),
     m_driveVoltage(0.0f),
     m_filteredCorrection(0.0f),
-    m_centerHoldActive(false)
+    m_centerHoldActive(false),
+    m_centerHoldEnter(CENTER_HOLD_ENTER_DEFAULT),
+    m_centerHoldExit(CENTER_HOLD_EXIT_DEFAULT)
 {
     m_sensorBar.clearInvertBits();
     m_sensorBar.clearBarStrobe();
@@ -61,20 +63,26 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // Hold steering at center for small sensor toggles around the line center.
     if (m_centerHoldActive) {
-        if (absCorrection < CENTER_HOLD_EXIT) {
+        if (absCorrection < m_centerHoldExit) {
             correction = 0.0f;
         } else {
             m_centerHoldActive = false;
         }
     }
 
-    if (!m_centerHoldActive && absCorrection < CENTER_HOLD_ENTER) {
+    if (!m_centerHoldActive && absCorrection < m_centerHoldEnter) {
         m_centerHoldActive = true;
         correction = 0.0f;
     }
 
     if (fabsf(correction) < CORRECTION_DEADBAND)
         correction = 0.0f;
+
+    if (m_centerHoldActive) {
+        m_pidController.reset();
+        m_filteredCorrection = 0.0f;
+        m_steeringCommand = STEERING_CENTER;
+    }
 
     m_filteredCorrection += CORRECTION_ALPHA * (correction - m_filteredCorrection);
 
@@ -117,4 +125,20 @@ float LineArrayModule::steeringCommand() const
 float LineArrayModule::driveVoltage() const
 {
     return m_driveVoltage;
+}
+
+void LineArrayModule::setCenterHoldThresholds(float enterThreshold, float exitThreshold)
+{
+    float enter = enterThreshold;
+    float exit = exitThreshold;
+
+    if (enter < 0.0f)
+        enter = 0.0f;
+    if (exit < 0.0f)
+        exit = 0.0f;
+    if (enter > exit)
+        enter = exit;
+
+    m_centerHoldEnter = enter;
+    m_centerHoldExit = exit;
 }
