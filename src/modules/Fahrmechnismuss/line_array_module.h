@@ -29,4 +29,5 @@ private:
     float m_steeringCommand;
     float m_driveVoltage;
     float m_filteredCorrection;
+    bool m_centerHoldActive;
 };

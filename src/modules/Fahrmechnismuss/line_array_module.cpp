@@ -12,11 +12,13 @@ static constexpr float STEERING_MAX           = 0.8f;  //max servo position with
 static constexpr float DRIVE_VOLTAGE_FULL     = 12.0f;
 static constexpr float PID_KP                 = -0.7f; //steering correction strength (negative to steer in correct direction)
 static constexpr float PID_KI                 = 0.0f;
-static constexpr float PID_KD                 = -0.9f;
+static constexpr float PID_KD                 = -1.5f; //steering damping (negative to steer in correct direction)
 static constexpr float PID_DT_SECONDS         = 0.02f;// PID update interval in seconds, should match main loop period for best performance
-static constexpr float CORRECTION_DEADBAND    = 3.0f;
+static constexpr float CORRECTION_DEADBAND    = 1.0f;
 static constexpr float CORRECTION_ALPHA       = 0.35f;
 static constexpr float STEERING_STEP_MAX      = 0.015f;
+static constexpr float CENTER_HOLD_ENTER      = 2.0f;
+static constexpr float CENTER_HOLD_EXIT       = 4.0f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
@@ -38,7 +40,8 @@ LineArrayModule::LineArrayModule() :
                     STEERING_MAX - STEERING_CENTER),
     m_steeringCommand(STEERING_CENTER),
     m_driveVoltage(0.0f),
-    m_filteredCorrection(0.0f)
+    m_filteredCorrection(0.0f),
+    m_centerHoldActive(false)
 {
     m_sensorBar.clearInvertBits();
     m_sensorBar.clearBarStrobe();
@@ -54,6 +57,22 @@ uint8_t LineArrayModule::update(bool do_print)
     const float rawCorrection = lineDetected ? (static_cast<float>(position) ) : 0.0f;
 
     float correction = rawCorrection;
+    const float absCorrection = fabsf(correction);
+
+    // Hold steering at center for small sensor toggles around the line center.
+    if (m_centerHoldActive) {
+        if (absCorrection < CENTER_HOLD_EXIT) {
+            correction = 0.0f;
+        } else {
+            m_centerHoldActive = false;
+        }
+    }
+
+    if (!m_centerHoldActive && absCorrection < CENTER_HOLD_ENTER) {
+        m_centerHoldActive = true;
+        correction = 0.0f;
+    }
+
     if (fabsf(correction) < CORRECTION_DEADBAND)
         correction = 0.0f;
 
@@ -81,6 +100,7 @@ uint8_t LineArrayModule::update(bool do_print)
         m_filteredCorrection = 0.0f;
         m_steeringCommand = STEERING_CENTER;
         m_driveVoltage = 0.0f;
+        m_centerHoldActive = false;
     }
 
     if (do_print)
