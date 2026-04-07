@@ -5,15 +5,14 @@
 
 // drivers
 #include "DebounceIn.h"
-#include "modules/Fahrmechnismuss/color_sensor_module.h"
-#include "modules/Fahrmechnismuss/debug_print.h"
-#include "modules/Fahrmechnismuss/line_array_module.h"
-#include "modules/Fahrmechnismuss/motor_module.h"
-#include "modules/Fahrmechnismuss/servo_module.h"
+#include "modules/Fahrmechanismus/color_sensor_module.h"
+#include "modules/Fahrmechanismus/debug_print.h"
+#include "modules/Fahrmechanismus/line_array_module.h"
+#include "modules/Fahrmechanismus/motor_module.h"
+#include "modules/Fahrmechanismus/servo_module.h"
 #include "modules/ultrasonic_module.h"
-#include "modules/greifmechanismuss/abladen_module.h"
-#include "modules/greifmechanismuss/aufladen_module.h"
-#include "modules/greifmechanismuss/lagern_module.h"
+#include "modules/Greifmechanismus/abladen_module.h"
+#include "modules/Greifmechanismus/aufnehmen_module.h"
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
