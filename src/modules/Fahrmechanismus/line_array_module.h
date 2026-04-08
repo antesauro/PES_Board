@@ -2,7 +2,6 @@
 
 #include <cstdint>
 
-#include "PIDCntrl.h"
 #include "SensorBar.h"
 
 class LineArrayModule
@@ -29,7 +28,6 @@ public:
 
 private:
     SensorBar m_sensorBar;
-    PIDCntrl m_pidController;
     float m_steeringCommand;
     float m_driveVoltage;
     float m_filteredCorrection;
