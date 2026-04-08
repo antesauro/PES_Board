@@ -46,9 +46,22 @@ uint8_t LineArrayModule::update(bool do_print)
 
     const uint8_t raw = m_sensorBar.getRaw();
     const bool lineDetected = m_sensorBar.isAnyLedActive();
+    const uint8_t numActiveLeds = m_sensorBar.getNrOfLedsActive(); // gets number of active leds from sensor bar
+    float position = 0.0f;
 
-    // Read the raw angle and apply the fast EMA filter
-    const float position = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
+    // Crossing logic
+    if (lineDetected) {
+        // If the outer LEDs are more than 40% active, it's a horizontal line/crossing!
+        if (numActiveLeds >= 5) {
+            // Hold current steering angle to go straight across.
+            position = m_filteredCorrection;
+        } else {
+            //  Steer normally.
+            position = m_sensorBar.getAngleRad();
+        }
+    }
+
+    // apply the fast filter
     m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
