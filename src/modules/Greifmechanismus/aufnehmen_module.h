@@ -7,7 +7,7 @@ static constexpr int K_FARBE_BLAU = 2;
 static constexpr int K_FARBE_GELB = 3;
 static constexpr int K_FARBE_GRUEN = 4;
 
-// Shared storage state: one color variable per storage position.
+// Shared storage state: 0=leer, 1=rot, 2=blau, 3=gelb, 4=gruen.
 extern int g_lager_pos_1;
 extern int g_lager_pos_2;
 extern int g_lager_pos_3;
@@ -18,9 +18,11 @@ class AufnehmenModule
 public:
 	AufnehmenModule();
 
-	bool einlagern(int farbe);
-	int freiePlaetze() const;
-	bool istVoll() const;
+	int einlagernposition1();
+	int einlagernposition2();
+	int einlagernposition3();
+	int einlagernposition4();
+
 
 	void aufnehmenRot();
 	void aufnehmenBlau();
