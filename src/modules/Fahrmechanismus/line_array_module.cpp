@@ -1,24 +1,22 @@
 #include "line_array_module.h"
 
+#include <cmath>
+
 #include "PESBoardPinMap.h"
 #include "debug_print.h"
 
-#include <cmath>
-
 namespace {
-static constexpr float STEERING_CENTER        = 0.5f;
-static constexpr float STEERING_MIN           = 0.20f; //min servo position with 1.25  gear ration
-static constexpr float STEERING_MAX           = 0.8f;  //max servo position with 1.25  gear ration
-static constexpr float DRIVE_VOLTAGE_FULL     = 12.0f;
-static constexpr float PID_KP                 = -0.7f; //steering correction strength (negative to steer in correct direction)
-static constexpr float PID_KI                 = 0.0f;
-static constexpr float PID_KD                 = -1.5f; //steering damping (negative to steer in correct direction)
-static constexpr float PID_DT_SECONDS         = 0.02f;// PID update interval in seconds, should match main loop period for best performance
-static constexpr float CORRECTION_DEADBAND    = 1.0f;
-static constexpr float CORRECTION_ALPHA       = 0.35f;
-static constexpr float STEERING_STEP_MAX      = 0.015f;
-static constexpr float CENTER_HOLD_ENTER_DEFAULT = 11.0f;
-static constexpr float CENTER_HOLD_EXIT_DEFAULT  = 13.0f;
+static constexpr float STEERING_CENTER = 0.5f;
+static constexpr float STEERING_MIN = 0.20f; // min servo position with 1.25 gear ratio
+static constexpr float STEERING_MAX = 0.8f;  // max servo position with 1.25 gear ratio
+static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
+
+// --- NEW NON-LINEAR CONTROLLER GAINS ---
+static constexpr float KP_LINEAR = -0.1f;    // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -1.5f; // Aggressive booster for sharp curves
+
+static constexpr float CORRECTION_ALPHA = 0.5f;  // Keep the EMA filter for smooth servo action
+static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
@@ -27,23 +25,16 @@ float clampf(float value, float minValue, float maxValue)
 {
     return (value < minValue) ? minValue : ((value > maxValue) ? maxValue : value);
 }
-}
+} // namespace
 
-LineArrayModule::LineArrayModule() :
-    m_sensorBar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false),
-
-    m_pidController(PID_KP,
-                    PID_KI,
-                    PID_KD,
-                    PID_DT_SECONDS,
-                    STEERING_MIN - STEERING_CENTER,
-                    STEERING_MAX - STEERING_CENTER),
-    m_steeringCommand(STEERING_CENTER),
-    m_driveVoltage(0.0f),
-    m_filteredCorrection(0.0f),
-    m_centerHoldActive(false),
-    m_centerHoldEnter(CENTER_HOLD_ENTER_DEFAULT),
-    m_centerHoldExit(CENTER_HOLD_EXIT_DEFAULT)
+LineArrayModule::LineArrayModule()
+    : m_sensorBar(PB_IMU_SDA, PB_IMU_SCL, 0.10f, false)
+    , m_steeringCommand(STEERING_CENTER)
+    , m_driveVoltage(0.0f)
+    , m_filteredCorrection(0.0f)
+    , m_centerHoldActive(false)
+    , m_centerHoldEnter(0.0f)
+    , m_centerHoldExit(0.0f)
 {
     m_sensorBar.clearInvertBits();
     m_sensorBar.clearBarStrobe();
@@ -55,36 +46,10 @@ uint8_t LineArrayModule::update(bool do_print)
 
     const uint8_t raw = m_sensorBar.getRaw();
     const bool lineDetected = m_sensorBar.isAnyLedActive();
-    const int8_t position = lineDetected ? m_sensorBar.getBinaryPosition() : 0;
-    const float rawCorrection = lineDetected ? (static_cast<float>(position) ) : 0.0f;
 
-    float correction = rawCorrection;
-    const float absCorrection = fabsf(correction);
-
-    // Hold steering at center for small sensor toggles around the line center.
-    if (m_centerHoldActive) {
-        if (absCorrection < m_centerHoldExit) {
-            correction = 0.0f;
-        } else {
-            m_centerHoldActive = false;
-        }
-    }
-
-    if (!m_centerHoldActive && absCorrection < m_centerHoldEnter) {
-        m_centerHoldActive = true;
-        correction = 0.0f;
-    }
-
-    if (fabsf(correction) < CORRECTION_DEADBAND)
-        correction = 0.0f;
-
-    if (m_centerHoldActive) {
-        m_pidController.reset();
-        m_filteredCorrection = 0.0f;
-        m_steeringCommand = STEERING_CENTER;
-    }
-
-    m_filteredCorrection += CORRECTION_ALPHA * (correction - m_filteredCorrection);
+    // Read the raw angle and apply the fast EMA filter
+    const float position = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
+    m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
     if (raw == SENSOR_MASK_ALL_BITS)
@@ -92,19 +57,34 @@ uint8_t LineArrayModule::update(bool do_print)
     else if (raw == SENSOR_MASK_B2_TO_B5)
         event = EVENT_PICKUP_HOUSE;
 
-    const float steeringTarget = STEERING_CENTER - m_pidController.update(m_filteredCorrection);
+    // --- NON-LINEAR P CONTROLLER MATH ---
+    float err = m_filteredCorrection;
+    float steeringOutput = (KP_LINEAR * err) + (KP_NONLINEAR * err * fabsf(err));
+
+    // Apply the output to the target (using subtraction to steer the correct way)
+    const float steeringTarget = STEERING_CENTER - steeringOutput;
+
     const float steeringDelta = clampf(steeringTarget - m_steeringCommand, -STEERING_STEP_MAX, STEERING_STEP_MAX);
     m_steeringCommand = clampf(m_steeringCommand + steeringDelta, STEERING_MIN, STEERING_MAX);
 
-    // Scale drive voltage by how close to centre the line is
-    const float max_error = 127.0f;
-    float drive_scale = 1.1f - fabsf(m_filteredCorrection) / max_error;
-    if (drive_scale < 0.0f) drive_scale = 0.0f;
-    if (drive_scale > 1.0f) drive_scale = 1.0f;
+    // --- DRIVE SCALING ---
+    const float max_error = 0.5f; // Roughly max angle in radians
+    float drive_scale = 1.0f - fabsf(m_filteredCorrection) / max_error;
+
+    // Minimum power in curves
+    const float MIN_DRIVE_SCALE = 0.3f;
+
+    if (drive_scale < MIN_DRIVE_SCALE) {
+        drive_scale = MIN_DRIVE_SCALE;
+    }
+    if (drive_scale > 1.0f) {
+        drive_scale = 1.0f;
+    }
+
     m_driveVoltage = DRIVE_VOLTAGE_FULL * drive_scale;
 
+    // --- RESET LOGIC ---
     if (!lineDetected) {
-        m_pidController.reset();
         m_filteredCorrection = 0.0f;
         m_steeringCommand = STEERING_CENTER;
         m_driveVoltage = 0.0f;
@@ -117,28 +97,11 @@ uint8_t LineArrayModule::update(bool do_print)
     return event;
 }
 
-float LineArrayModule::steeringCommand() const
-{
-    return m_steeringCommand;
-}
+float LineArrayModule::steeringCommand() const { return m_steeringCommand; }
 
-float LineArrayModule::driveVoltage() const
-{
-    return m_driveVoltage;
-}
+float LineArrayModule::driveVoltage() const { return m_driveVoltage; }
 
 void LineArrayModule::setCenterHoldThresholds(float enterThreshold, float exitThreshold)
 {
-    float enter = enterThreshold;
-    float exit = exitThreshold;
-
-    if (enter < 0.0f)
-        enter = 0.0f;
-    if (exit < 0.0f)
-        exit = 0.0f;
-    if (enter > exit)
-        enter = exit;
-
-    m_centerHoldEnter = enter;
-    m_centerHoldExit = exit;
+    // Unused, but kept to prevent compilation errors if called from main.cpp
 }

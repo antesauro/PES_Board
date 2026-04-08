@@ -10,9 +10,9 @@
 #include "modules/Fahrmechanismus/line_array_module.h"
 #include "modules/Fahrmechanismus/motor_module.h"
 #include "modules/Fahrmechanismus/servo_module.h"
-#include "modules/ultrasonic_module.h"
 #include "modules/Greifmechanismus/abladen_module.h"
 #include "modules/Greifmechanismus/aufnehmen_module.h"
+#include "modules/ultrasonic_module.h"
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
@@ -32,8 +32,8 @@ int main()
 {
     // while loop gets executed every main_task_period_ms milliseconds, this is a
     // simple approach to repeatedly execute main
-    const int main_task_period_ms = 20;  // main loop period in ms (50 Hz)
-    const int print_period_ms     = 250; // print interval in ms
+    const int main_task_period_ms = 20; // main loop period in ms (50 Hz)
+    const int print_period_ms = 250;    // print interval in ms
     Timer main_task_timer;
 
     /* INPUT OBJECTS*/
@@ -132,7 +132,7 @@ int main()
 
                 // Scale drive velocity by line deviation (0..max_rps).
                 // a 0..1 scale, then multiply by the chosen top speed in rps.
-                static constexpr float DRIVE_MAX_RPS = 0.75f; // tune as needed max at 1.5
+                static constexpr float DRIVE_MAX_RPS = 1.0f; // tune as needed max at 1.5
                 const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                 motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                 servo_module.setSteeringAngle(line_array_module.steeringCommand());
@@ -167,7 +167,6 @@ int main()
 
             case RobotState::RETRIEVE:
                 printRetrieveState();
-                
 
                 break;
 

@@ -1,6 +1,5 @@
-#include "servo_module.h"
-
 #include "PESBoardPinMap.h"
+#include "servo_module.h"
 
 namespace {
 // Physical pulse width limits (seconds) determined by servo calibration.
@@ -8,16 +7,17 @@ static constexpr float SERVO_D0_ANG_MIN = 0.035f;
 static constexpr float SERVO_D0_ANG_MAX = 0.110f;
 // Center of the servo travel range (normalized 0..1 position, NOT a duty cycle).
 static constexpr float SERVO_CENTER_ANGLE = 0.5f;
-}
+} // namespace
 
-ServoModule::ServoModule() : m_servoD0(PB_D0)
+ServoModule::ServoModule()
+    : m_servoD0(PB_D0)
 {
 }
 
 void ServoModule::initialize()
 {
     m_servoD0.calibratePulseMinMax(SERVO_D0_ANG_MIN, SERVO_D0_ANG_MAX);
-    m_servoD0.setMaxAcceleration(1.0e6f);// no acceleration limit
+    m_servoD0.setMaxAcceleration(1.0f); // Acceleration limit for servo
     if (!m_servoD0.isEnabled()) {
         // Enable directly at center to avoid an initial jump to 0.0.
         m_servoD0.enable(SERVO_CENTER_ANGLE);
@@ -31,10 +31,7 @@ void ServoModule::setSteeringAngle(float angle)
     m_servoD0.setPulseWidth(angle);
 }
 
-void ServoModule::center()
-{
-    m_servoD0.setPulseWidth(SERVO_CENTER_ANGLE);
-}
+void ServoModule::center() { m_servoD0.setPulseWidth(SERVO_CENTER_ANGLE); }
 
 void ServoModule::disable()
 {
