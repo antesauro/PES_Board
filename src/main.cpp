@@ -145,8 +145,8 @@ int main()
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                    float velocity_cmd = drive_scale * DRIVE_MAX_RPS;
-                    float steering_cmd = line_array_module.steeringCommand();
+                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
                 }
 
                 if (distance_traveled >= 5.0f) {
