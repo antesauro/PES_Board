@@ -58,6 +58,8 @@ int main()
     ColorSensorModule color_sensor_module;
     ServoModule servo_module;
     MotorModule motor_module;
+    AufnehmenModule aufnehmen_module;
+    AbladenModule abladen_module;
 
     int print_cycle_counter = 0;
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
@@ -147,10 +149,18 @@ int main()
 
                 if (action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
                     printPickupHouseDistanceMm(PICKUP_HOUSE_DISTANCE_MM);
-                    // robot_state = RobotState::PICKUP;
+                    const int farbe = color_sensor_module.detectedPackageColor();
+                    if (farbe == 1) aufnehmen_module.aufnehmenRot();
+                    else if (farbe == 2) aufnehmen_module.aufnehmenBlau();
+                    else if (farbe == 3) aufnehmen_module.aufnehmenGelb();
+                    else if (farbe == 4) aufnehmen_module.aufnehmenGruen();
                 } else if (action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
                     printDeliveryHouseDistanceMm(DELIVERY_HOUSE_DISTANCE_MM);
-                    // robot_state = RobotState::DELIVER;
+                    const int farbe = color_sensor_module.detectedPackageColor();
+                    if (farbe == 1) abladen_module.abladenRot();
+                    else if (farbe == 2) abladen_module.abladenBlau();
+                    else if (farbe == 3) abladen_module.abladenGelb();
+                    else if (farbe == 4) abladen_module.abladenGruen();
                 }
                 break;
             }
