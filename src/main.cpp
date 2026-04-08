@@ -64,10 +64,13 @@ int main()
     int print_cycle_counter = 0;
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
 
+    float startup_rotation = 0.0f; // Motor rotation variable for the startup sequence
+
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
         INITIAL,
         READY,
+        START,
         DRIVE,
         RETRIEVE,
         PICKUP,
@@ -107,7 +110,8 @@ int main()
                 printReadyState();
 
                 if (do_execute_main_task) {
-                    robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::START;
+                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
                     led1 = 1;
 
                 } else {
@@ -120,14 +124,45 @@ int main()
                         servo_module.disable();
                         motor_module.disable();
                         ultrasonic_module.reset();
+                        startup_rotation = 0.0f;
                         led1 = 0;
                     }
                 }
 
                 break;
+            case RobotState::START: {
+                const bool do_print = (print_cycle_counter == 0);
+                line_array_module.update(do_print);
+
+                float distance_traveled =
+                    motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
+                static constexpr float DRIVE_MAX_RPS = 0.75f;
+
+                // First intersection encounter (noch testen mit Abstand!)
+                if (distance_traveled < 5.0f) {
+                    motor_module.setVelocity(0.5f);      // force speed to not block
+                    servo_module.setSteeringAngle(0.2f); // set turn angle for left turn
+                } else {
+                    // normal line follow
+                    float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                    float velocity_cmd = drive_scale * DRIVE_MAX_RPS;
+                    float steering_cmd = line_array_module.steeringCommand();
+                }
+
+                if (distance_traveled >= 5.0f) {
+                    robot_state = RobotState::DRIVE;
+                }
+
+                print_cycle_counter++;
+                if (print_cycle_counter >= print_cycle_divider)
+                    print_cycle_counter = 0;
+
+                break;
+            }
 
             case RobotState::DRIVE: {
                 const bool do_print = (print_cycle_counter == 0);
+
                 const uint8_t action_code = line_array_module.update(do_print);
 
                 // Scale drive velocity by line deviation (0..max_rps).
@@ -150,17 +185,25 @@ int main()
                 if (action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
                     printPickupHouseDistanceMm(PICKUP_HOUSE_DISTANCE_MM);
                     const int farbe = color_sensor_module.detectedPackageColor();
-                    if (farbe == 1) aufnehmen_module.aufnehmenRot();
-                    else if (farbe == 2) aufnehmen_module.aufnehmenBlau();
-                    else if (farbe == 3) aufnehmen_module.aufnehmenGelb();
-                    else if (farbe == 4) aufnehmen_module.aufnehmenGruen();
+                    if (farbe == 1)
+                        aufnehmen_module.aufnehmenRot();
+                    else if (farbe == 2)
+                        aufnehmen_module.aufnehmenBlau();
+                    else if (farbe == 3)
+                        aufnehmen_module.aufnehmenGelb();
+                    else if (farbe == 4)
+                        aufnehmen_module.aufnehmenGruen();
                 } else if (action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
                     printDeliveryHouseDistanceMm(DELIVERY_HOUSE_DISTANCE_MM);
                     const int farbe = color_sensor_module.detectedPackageColor();
-                    if (farbe == 1) abladen_module.abladenRot();
-                    else if (farbe == 2) abladen_module.abladenBlau();
-                    else if (farbe == 3) abladen_module.abladenGelb();
-                    else if (farbe == 4) abladen_module.abladenGruen();
+                    if (farbe == 1)
+                        abladen_module.abladenRot();
+                    else if (farbe == 2)
+                        abladen_module.abladenBlau();
+                    else if (farbe == 3)
+                        abladen_module.abladenGelb();
+                    else if (farbe == 4)
+                        abladen_module.abladenGruen();
                 }
                 break;
             }
