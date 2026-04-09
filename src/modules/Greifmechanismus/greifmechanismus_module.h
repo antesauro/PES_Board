@@ -3,6 +3,7 @@
 namespace gripper_cfg {
 
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
+inline constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel = 0.0f;
 inline constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.083f;
 inline constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.344f;
 
@@ -18,7 +19,6 @@ inline constexpr float LAGER_POS_4_D = 0.0f;
 // Lenkung bei Lagerplaetzen.
 inline constexpr float LAGER_LENKUNG = 0.0f;
 
-// false: einzelnes Paket; true: Paket wird zusaetzlich im Lager verwaltet.
 inline bool lager = false;
 
 // Seilhub fuer Haus und Lager.
@@ -38,39 +38,37 @@ static constexpr int K_FARBE_GRUEN = 4;
 
 namespace lagern
 {
+// Shared storage state: 0=leer, 1=rot, 2=blau, 3=gelb, 4=gruen.
 extern int g_lager_pos_1;
 extern int g_lager_pos_2;
 extern int g_lager_pos_3;
 extern int g_lager_pos_4;
-}
+} // namespace lagern
 
 namespace aufnehmen
 {
 class AufnehmenModule
 {
 public:
-	AufnehmenModule();
+    AufnehmenModule();
 
-	void aufnehmenRot();
-	void aufnehmenBlau();
-	void aufnehmenGelb();
-	void aufnehmenGruen();
+    void aufnehmenRot();
+    void aufnehmenBlau();
+    void aufnehmenGelb();
+    void aufnehmenGruen();
 };
-}
+} // namespace aufnehmen
 
 namespace abladen
 {
 class AbladenModule
 {
 public:
-	AbladenModule();
+    AbladenModule();
 
-	void abladenRot();
-	void abladenBlau();
-	void abladenGelb();
-	void abladenGruen();
+    void abladenRot();
+    void abladenBlau();
+    void abladenGelb();
+    void abladenGruen();
 };
-}
-
-using AufnehmenModule = aufnehmen::AufnehmenModule;
-using AbladenModule = abladen::AbladenModule;
+} // namespace abladen
