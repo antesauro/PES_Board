@@ -60,9 +60,9 @@ int main()
     aufnehmen::AufnehmenModule aufnehmen_module;
     abladen::AbladenModule abladen_module;
 
-    bool rot_abgegeben   = false;
-    bool gelb_abgegeben  = false;
-    bool blau_abgegeben  = false;
+    bool rot_abgegeben = false;
+    bool gelb_abgegeben = false;
+    bool blau_abgegeben = false;
     bool gruen_abgegeben = false;
     int schon_ein_paeckchen_aufgenommen = 0;
     int house_event_cooldown_cycles = 0;
@@ -70,6 +70,9 @@ int main()
 
     int print_cycle_counter = 0;
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
+
+    float startup_rotation = 0.0f; // Motor rotation variable for the startup sequence
+    float distance_traveled = 0.0f;
 
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
@@ -105,7 +108,6 @@ int main()
                 servo_module.initialize();
                 servo_module.center();
                 color_sensor_module.update();
-
                 robot_state = RobotState::READY;
                 break;
 
@@ -113,8 +115,9 @@ int main()
                 printReadyState();
 
                 if (do_execute_main_task) {
-                    robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::START;
                     led1 = 1;
+                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
 
                 } else {
                     // the following code block gets executed only once
@@ -126,12 +129,42 @@ int main()
                         servo_module.disable();
                         motor_module.disable();
                         ultrasonic_module.reset();
-                        house_event_cooldown_cycles = 0;
+                        startup_rotation = 0.0f;
+                        distance_traveled = 0.0f;
                         led1 = 0;
                     }
                 }
 
                 break;
+            case RobotState::START: {
+                const bool do_print = (print_cycle_counter == 0);
+                line_array_module.update(do_print);
+
+                distance_traveled =
+                    motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
+                static constexpr float DRIVE_MAX_RPS = 0.75f;
+
+                // First intersection encounter (noch testen mit Abstand!)
+                if (distance_traveled >= 2.0f && distance_traveled < 4.0f) {
+                    motor_module.setVelocity(0.5f);       // force speed to not block
+                    servo_module.setSteeringAngle(-0.2f); // set turn angle for left turn
+                } else {
+                    // normal line follow
+                    float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                }
+
+                if (distance_traveled >= 5.0f) {
+                    robot_state = RobotState::DRIVE;
+                }
+
+                print_cycle_counter++;
+                if (print_cycle_counter >= print_cycle_divider)
+                    print_cycle_counter = 0;
+
+                break;
+            }
 
             case RobotState::DRIVE: {
                 const bool do_print = (print_cycle_counter == 0);
@@ -160,51 +193,52 @@ int main()
                 if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
                     robot_state = RobotState::RETRIEVE;
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                    
+
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
                     robot_state = RobotState::DELIVER;
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                    
                 }
                 break;
             }
             case RobotState::RETRIEVE: {
                 printPickupState();
 
-                    const int farbe = color_sensor_module.detectedPackageColor();
+                const int farbe = color_sensor_module.detectedPackageColor();
 
-                    if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
-                    { aufnehmen_module.aufnehmenRot(); 
-                        if (!gripper_cfg::lager) 
-                            {schon_ein_paeckchen_aufgenommen = 1;}
-                            robot_state = RobotState::DRIVE;
+                if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
+                    aufnehmen_module.aufnehmenRot();
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 1;
                     }
-                    else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
-                    { aufnehmen_module.aufnehmenBlau(); 
-                        if (!gripper_cfg::lager) 
-                            {schon_ein_paeckchen_aufgenommen = 2;}
-                            robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::DRIVE;
+                } else if (farbe == 2 and !blau_abgegeben and
+                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
+                    aufnehmen_module.aufnehmenBlau();
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 2;
                     }
-                    else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
-                    { aufnehmen_module.aufnehmenGelb(); 
-                        if (!gripper_cfg::lager) 
-                            {schon_ein_paeckchen_aufgenommen = 3;}
-                            robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::DRIVE;
+                } else if (farbe == 3 and !gelb_abgegeben and
+                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
+                    aufnehmen_module.aufnehmenGelb();
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 3;
                     }
-                    else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
-                    { aufnehmen_module.aufnehmenGruen(); if (!gripper_cfg::lager) 
-                            {schon_ein_paeckchen_aufgenommen = 4;}
-                            robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::DRIVE;
+                } else if (farbe == 4 and !gruen_abgegeben and
+                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
+                    aufnehmen_module.aufnehmenGruen();
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 4;
                     }
-                    else {
-                        // no matching color or already holding a package -> go back to DRIVE
-                        robot_state = RobotState::DRIVE;
-                    }
-                    
+                    robot_state = RobotState::DRIVE;
+                } else {
+                    // no matching color or already holding a package -> go back to DRIVE
+                    robot_state = RobotState::DRIVE;
+                }
+
                 break;
             }
-
-
 
             case RobotState::DELIVER: {
                 printDeliverState();
@@ -216,51 +250,49 @@ int main()
                     if (!gripper_cfg::lager) {
                         schon_ein_paeckchen_aufgenommen = 0;
                     }
-                }
-                else if (farbe == 2 && !blau_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 2)) {
+                } else if (farbe == 2 && !blau_abgegeben &&
+                           (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 2)) {
                     abladen_module.abladenBlau();
                     blau_abgegeben = true;
                     if (!gripper_cfg::lager) {
                         schon_ein_paeckchen_aufgenommen = 0;
                     }
-                }
-                else if (farbe == 3 && !gelb_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 3)) {
+                } else if (farbe == 3 && !gelb_abgegeben &&
+                           (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 3)) {
                     abladen_module.abladenGelb();
                     gelb_abgegeben = true;
                     if (!gripper_cfg::lager) {
                         schon_ein_paeckchen_aufgenommen = 0;
                     }
-                }
-                else if (farbe == 4 && !gruen_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 4)) {
+                } else if (farbe == 4 && !gruen_abgegeben &&
+                           (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 4)) {
                     abladen_module.abladenGruen();
                     gruen_abgegeben = true;
                     if (!gripper_cfg::lager) {
                         schon_ein_paeckchen_aufgenommen = 0;
                     }
-                }
-                else {
+                } else {
                     robot_state = RobotState::DRIVE;
                     break;
-    }
+                }
 
-    // nach jedem erfolgreichen Abladen sofort prüfen
-     if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
-        rot_abgegeben = false;
-        blau_abgegeben = false;
-        gelb_abgegeben = false;
-        gruen_abgegeben = false;
-        schon_ein_paeckchen_aufgenommen = 0;
+                // nach jedem erfolgreichen Abladen sofort prüfen
+                if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
+                    rot_abgegeben = false;
+                    blau_abgegeben = false;
+                    gelb_abgegeben = false;
+                    gruen_abgegeben = false;
+                    schon_ein_paeckchen_aufgenommen = 0;
 
-        robot_state = RobotState::INITIAL;
-        do_execute_main_task = false;
-        do_reset_all_once = true;
-        led1 = 0;
-    } else {
-        robot_state = RobotState::DRIVE;
-    }
-    break;
-}
-
+                    robot_state = RobotState::INITIAL;
+                    do_execute_main_task = false;
+                    do_reset_all_once = true;
+                    led1 = 0;
+                } else {
+                    robot_state = RobotState::DRIVE;
+                }
+                break;
+            }
 
             case RobotState::SLEEP:
                 printSleepState();
