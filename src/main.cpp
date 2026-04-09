@@ -65,6 +65,7 @@ int main()
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
 
     float startup_rotation = 0.0f; // Motor rotation variable for the startup sequence
+    float distance_traveled = 0.0f;
 
     /* ROBOT STATES DECLARATION*/
     enum RobotState {
@@ -102,7 +103,6 @@ int main()
                 servo_module.initialize();
                 servo_module.center();
                 color_sensor_module.update();
-
                 robot_state = RobotState::READY;
                 break;
 
@@ -111,8 +111,8 @@ int main()
 
                 if (do_execute_main_task) {
                     robot_state = RobotState::START;
-                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
                     led1 = 1;
+                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
 
                 } else {
                     // the following code block gets executed only once
@@ -125,6 +125,7 @@ int main()
                         motor_module.disable();
                         ultrasonic_module.reset();
                         startup_rotation = 0.0f;
+                        distance_traveled = 0.0f;
                         led1 = 0;
                     }
                 }
@@ -134,14 +135,14 @@ int main()
                 const bool do_print = (print_cycle_counter == 0);
                 line_array_module.update(do_print);
 
-                float distance_traveled =
+                distance_traveled =
                     motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
                 static constexpr float DRIVE_MAX_RPS = 0.75f;
 
                 // First intersection encounter (noch testen mit Abstand!)
-                if (distance_traveled < 5.0f) {
-                    motor_module.setVelocity(0.5f);      // force speed to not block
-                    servo_module.setSteeringAngle(0.2f); // set turn angle for left turn
+                if (distance_traveled >= 2.0f && distance_traveled < 4.0f) {
+                    motor_module.setVelocity(0.5f);       // force speed to not block
+                    servo_module.setSteeringAngle(-0.2f); // set turn angle for left turn
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
