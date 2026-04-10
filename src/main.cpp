@@ -171,8 +171,6 @@ int main()
                 motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                 servo_module.setSteeringAngle(line_array_module.steeringCommand());
 
-                color_sensor_module.update();
-
                 if (do_print) {
                     printDriveStatus(color_sensor_module);
                 }
