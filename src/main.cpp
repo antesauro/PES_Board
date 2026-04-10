@@ -78,6 +78,7 @@ int main()
     enum RobotState {
         INITIAL,
         READY,
+        START,
         DRIVE,
         RETRIEVE,
         DELIVER,
