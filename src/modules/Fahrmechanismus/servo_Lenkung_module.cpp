@@ -17,7 +17,7 @@ ServoModule::ServoModule()
 void ServoModule::initialize()
 {
     m_servoD0.calibratePulseMinMax(SERVO_D0_ANG_MIN, SERVO_D0_ANG_MAX);
-    m_servoD0.setMaxAcceleration(1.0f); // Acceleration limit for servo
+    m_servoD0.setMaxAcceleration(1.5f); // Acceleration limit for servo
     if (!m_servoD0.isEnabled()) {
         // Enable directly at center to avoid an initial jump to 0.0.
         m_servoD0.enable(SERVO_CENTER_ANGLE);

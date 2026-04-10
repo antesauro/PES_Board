@@ -1,6 +1,7 @@
 #include "line_array_module.h"
 
 #include <cmath>
+#include <string>
 
 #include "PESBoardPinMap.h"
 #include "debug_print.h"
@@ -12,11 +13,11 @@ static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gea
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.12f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -1.5f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.1f;    // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -1.6f; // Aggressive factor for sharp curves
 
-static constexpr float CORRECTION_ALPHA = 0.7f;  // Keep the EMA filter for smooth servo action
-static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
+static constexpr float CORRECTION_ALPHA = 0.6f;  // Keep the EMA filter for smooth servo action
+static constexpr float STEERING_STEP_MAX = 0.3f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
@@ -52,7 +53,7 @@ uint8_t LineArrayModule::update(bool do_print)
     // Crossing logic
     if (lineDetected) {
         // If the outer LEDs are more than 40% active, it's a horizontal line/crossing!
-        if (numActiveLeds >= 5) {
+        if (numActiveLeds >= 4) {
             // Hold current steering angle to go straight across.
             position = m_filteredCorrection;
         } else {
@@ -60,7 +61,6 @@ uint8_t LineArrayModule::update(bool do_print)
             position = m_sensorBar.getAngleRad();
         }
     }
-
     // apply the fast filter
     m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
