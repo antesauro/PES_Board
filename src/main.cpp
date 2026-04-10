@@ -207,55 +207,59 @@ int main()
 
 
             case RobotState::DELIVER: {
-                    printDeliverState();
+                printDeliverState();
+                const int farbe = color_sensor_module.detectedPackageColor();
 
-                    const int farbe = color_sensor_module.detectedPackageColor();
-                    
-                    if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 1)) 
-                    { abladen_module.abladenRot();
-                        rot_abgegeben = true; 
-                        if (!gripper_cfg::lager)
-                            {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
-                    }
-                    else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 2)) 
-                    { abladen_module.abladenBlau();
-                        blau_abgegeben = true; 
-                        if (!gripper_cfg::lager)
-                            {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
-                    }
-                    else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 3)) 
-                    { abladen_module.abladenGelb();
-                        gelb_abgegeben = true;
-                        if (!gripper_cfg::lager)
-                            {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
-                    }
-                    else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 4)) 
-                    { abladen_module.abladenGruen();
-                        gruen_abgegeben = true; 
-                        if (!gripper_cfg::lager)
-                            {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;  
-                    }
-                    else if (rot_abgegeben and blau_abgegeben and gelb_abgegeben and gruen_abgegeben) 
-                    { 
-                        rot_abgegeben = false;
-                        blau_abgegeben = false;
-                        gelb_abgegeben = false;
-                        gruen_abgegeben = false;
+                if (farbe == 1 && !rot_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 1)) {
+                    abladen_module.abladenRot();
+                    rot_abgegeben = true;
+                    if (!gripper_cfg::lager) {
                         schon_ein_paeckchen_aufgenommen = 0;
-                        robot_state = RobotState::INITIAL;
-                        toggle_do_execute_main_fcn(); // stop main task execution
                     }
-                    else 
-                    {
-                        // if the detected color has already been given or wrong house, go back to DRIVE state  
-                        robot_state = RobotState::DRIVE;
+                }
+                else if (farbe == 2 && !blau_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 2)) {
+                    abladen_module.abladenBlau();
+                    blau_abgegeben = true;
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 0;
                     }
-                break;
-            }
+                }
+                else if (farbe == 3 && !gelb_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 3)) {
+                    abladen_module.abladenGelb();
+                    gelb_abgegeben = true;
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 0;
+                    }
+                }
+                else if (farbe == 4 && !gruen_abgegeben && (gripper_cfg::lager || schon_ein_paeckchen_aufgenommen == 4)) {
+                    abladen_module.abladenGruen();
+                    gruen_abgegeben = true;
+                    if (!gripper_cfg::lager) {
+                        schon_ein_paeckchen_aufgenommen = 0;
+                    }
+                }
+                else {
+                    robot_state = RobotState::DRIVE;
+                    break;
+    }
+
+    // nach jedem erfolgreichen Abladen sofort prüfen
+     if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
+        rot_abgegeben = false;
+        blau_abgegeben = false;
+        gelb_abgegeben = false;
+        gruen_abgegeben = false;
+        schon_ein_paeckchen_aufgenommen = 0;
+
+        robot_state = RobotState::INITIAL;
+        do_execute_main_task = false;
+        do_reset_all_once = true;
+        led1 = 0;
+    } else {
+        robot_state = RobotState::DRIVE;
+    }
+    break;
+}
 
 
             case RobotState::SLEEP:
