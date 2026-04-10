@@ -12,10 +12,10 @@ static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gea
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.13f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -1.7f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.12f;   // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -1.5f; // Aggressive booster for sharp curves
 
-static constexpr float CORRECTION_ALPHA = 0.5f;  // Keep the EMA filter for smooth servo action
+static constexpr float CORRECTION_ALPHA = 0.7f;  // Keep the EMA filter for smooth servo action
 static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
