@@ -133,12 +133,15 @@ int main()
 
                 distance_traveled =
                     motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.75f;
+                static constexpr float DRIVE_MAX_RPS = 0.5f;
 
                 // First intersection encounter (noch testen mit Abstand!)
-                if (distance_traveled >= 0.5f && distance_traveled < 1.0f) {
-                    motor_module.setVelocity(0.4f);       // force speed to not block
-                    servo_module.setSteeringAngle(0.75f); // set turn angle for left turn
+                if (distance_traveled >= 0.2f && distance_traveled < 0.8f) {
+                    motor_module.setVelocity(0.5f);      // force speed to not block
+                    servo_module.setSteeringAngle(0.6f); // set turn angle for left turn
+                } else if (distance_traveled >= 0.8f && distance_traveled < 1.5f) {
+                    motor_module.setVelocity(0.6f);      // force speed to not block
+                    servo_module.setSteeringAngle(0.7f); // set turn angle for left turn to smooth out
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
@@ -146,7 +149,7 @@ int main()
                     servo_module.setSteeringAngle(line_array_module.steeringCommand());
                 }
 
-                if (distance_traveled >= 1.0f) {
+                if (distance_traveled >= 1.5f) {
                     robot_state = RobotState::DRIVE;
                 }
 
@@ -163,7 +166,7 @@ int main()
 
                 // Scale drive velocity by line deviation (0..max_rps).
                 // a 0..1 scale, then multiply by the chosen top speed in rps.
-                static constexpr float DRIVE_MAX_RPS = 1.0f; // tune as needed max at 1.5
+                static constexpr float DRIVE_MAX_RPS = 1.3f;
                 const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                 motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                 servo_module.setSteeringAngle(line_array_module.steeringCommand());
