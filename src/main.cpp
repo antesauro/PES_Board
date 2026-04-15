@@ -91,12 +91,12 @@ int main()
 
     // start timer
     main_task_timer.start();
-
+    
     while (!toggle_emergency) {
         main_task_timer.reset();
-
+        color_sensor_module.update();
         ultrasonic_module.update();
-
+        color_sensor_module.printAverage();
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -145,15 +145,15 @@ int main()
                 servo_module.setSteeringAngle(line_array_module.steeringCommand());
 
                 color_sensor_module.update();
-
                 if (do_print) {
+                    color_sensor_module.printAverage();
                     printDriveStatus(color_sensor_module);
                 }
 
                 print_cycle_counter++;
                 if (print_cycle_counter >= print_cycle_divider)
                     print_cycle_counter = 0;
-
+/*
                 if (house_event_cooldown_cycles > 0)
                     house_event_cooldown_cycles--;
 
@@ -164,8 +164,7 @@ int main()
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
                     robot_state = RobotState::DELIVER;
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                    
-                }
+                }*/
                 break;
             }
             case RobotState::PICKUP: {

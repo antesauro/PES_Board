@@ -4,17 +4,17 @@
 #include "debug_print.h"
 #include "mbed.h"
 
-// Calibration values measured at 4 cm distance with sensor LED on
-// Black reference: Color Avg Hz: 2790 2823 4405 11136
-// White reference: Color Avg Hz: 5767 4938 7711 14064
-static constexpr float CALIB_BLACK_R = 2790.0f;
-static constexpr float CALIB_BLACK_G = 2823.0f;
-static constexpr float CALIB_BLACK_B = 4405.0f;
-static constexpr float CALIB_BLACK_C = 11136.0f;
-static constexpr float CALIB_WHITE_R = 5767.0f;
-static constexpr float CALIB_WHITE_G = 4938.0f;
-static constexpr float CALIB_WHITE_B = 7711.0f;
-static constexpr float CALIB_WHITE_C = 14064.0f;
+// Calibration values measured at 1 cm distance with sensor LED on
+// Black reference: Color Avg Hz: 12610 15276 20177 15177
+// White reference: (to be measured)
+static constexpr float CALIB_BLACK_R = 12610.0f;
+static constexpr float CALIB_BLACK_G = 15276.0f;
+static constexpr float CALIB_BLACK_B = 20177.0f;
+static constexpr float CALIB_BLACK_C = 15177.0f;
+static constexpr float CALIB_WHITE_R = 5767.0f;  // PLACEHOLDER - update after measurement
+static constexpr float CALIB_WHITE_G = 4938.0f;  // PLACEHOLDER - update after measurement
+static constexpr float CALIB_WHITE_B = 7711.0f;  // PLACEHOLDER - update after measurement
+static constexpr float CALIB_WHITE_C = 14064.0f; // PLACEHOLDER - update after measurement
 
 ColorSensorModule::ColorSensorModule() :
     m_sensor(PB_3),
