@@ -1,26 +1,20 @@
 #include "color_sensor_module.h"
 
 #include "PESBoardPinMap.h"
-#include "debug_print.h"
-#include "mbed.h"
 
-// Calibration values measured at 1 cm distance with sensor LED on
-// Black reference: Color Avg Hz: 12610 15276 20177 15177
-// White reference: (to be measured)
-static constexpr float CALIB_BLACK_R = 12610.0f;
-static constexpr float CALIB_BLACK_G = 15276.0f;
-static constexpr float CALIB_BLACK_B = 20177.0f;
-static constexpr float CALIB_BLACK_C = 15177.0f;
-static constexpr float CALIB_WHITE_R = 5767.0f;  // PLACEHOLDER - update after measurement
-static constexpr float CALIB_WHITE_G = 4938.0f;  // PLACEHOLDER - update after measurement
-static constexpr float CALIB_WHITE_B = 7711.0f;  // PLACEHOLDER - update after measurement
-static constexpr float CALIB_WHITE_C = 14064.0f; // PLACEHOLDER - update after measurement
+static constexpr float CALIB_BLACK_R = 355.97f;
+static constexpr float CALIB_BLACK_G = 355.37f;
+static constexpr float CALIB_BLACK_B = 1320.07f;
+static constexpr float CALIB_BLACK_C = 535.65f;
+static constexpr float CALIB_WHITE_R = 2197.95f;
+static constexpr float CALIB_WHITE_G = 2336.46f;
+static constexpr float CALIB_WHITE_B = 8210.50f;
+static constexpr float CALIB_WHITE_C = 3553.85f;
 
 ColorSensorModule::ColorSensorModule() :
-    m_sensor(PB_3),
-    m_avgHz{0.0f, 0.0f, 0.0f, 0.0f}
+    m_sensor(PB_3)
 {
-    m_sensor.switchLed(ON);
+    m_sensor.switchLed(OFF);
     calibrate();
 }
 
@@ -34,9 +28,8 @@ void ColorSensorModule::calibrate()
 
 void ColorSensorModule::update()
 {
-    const float* avg_hz = m_sensor.readColor();
-    for (int i = 0; i < 4; i++)
-        m_avgHz[i] = avg_hz[i];
+    // Trigger a read path from the sensor thread output.
+    (void)m_sensor.readColor();
 }
 
 void ColorSensorModule::printColor()
@@ -49,11 +42,6 @@ void ColorSensorModule::printColor()
            sensor_color_num,
            sensor_color_str,
            package_color_num);
-}
-
-void ColorSensorModule::printAverage() const
-{
-    printColorAverageHz(m_avgHz);
 }
 
 int ColorSensorModule::detectedPackageColor()

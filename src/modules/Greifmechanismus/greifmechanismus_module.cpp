@@ -1,7 +1,7 @@
 #include "greifmechanismus_module.h"
 
-#include "servo_module_Arm.h"
-#include "motor_module_Arm.h"
+#include "actuators/servo_module_Arm.h"
+#include "actuators/motor_module_Arm.h"
 
 namespace {
 arm_drehkranz::ServoModule* g_servo_drehkranz = nullptr;

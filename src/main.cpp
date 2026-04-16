@@ -94,9 +94,8 @@ int main()
     
     while (!toggle_emergency) {
         main_task_timer.reset();
-        color_sensor_module.update();
+        
         ultrasonic_module.update();
-        color_sensor_module.printAverage();
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -146,7 +145,6 @@ int main()
 
                 color_sensor_module.update();
                 if (do_print) {
-                    color_sensor_module.printAverage();
                     printDriveStatus(color_sensor_module);
                 }
 
@@ -169,7 +167,7 @@ int main()
             }
             case RobotState::PICKUP: {
                 printPickupState();
-
+                    color_sensor_module.update();
                     const int farbe = color_sensor_module.detectedPackageColor();
 
                     if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
