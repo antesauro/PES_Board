@@ -94,7 +94,7 @@ uint8_t LineArrayModule::update(bool do_print)
         drive_scale = 1.0f;
     }
 
-    m_driveVoltage = DRIVE_VOLTAGE_FULL * drive_scale;
+    m_driveVoltage = -DRIVE_VOLTAGE_FULL * drive_scale;
 
     // --- RESET LOGIC ---
     if (!lineDetected) {
