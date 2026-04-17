@@ -223,6 +223,9 @@ void ColorSensor::threadTask()
         for (int i = 0; i < 4; i++)
         {
             setColor(m_color[i]);
+            // Reset PwmIn timer so the first rising edge of the new channel
+            // measures a true period instead of the gap since the previous channel.
+            m_PwmIn.resetTimer();
             // Allow filter switching and output frequency to stabilize.
             ThisThread::sleep_for(25ms);
 
@@ -317,10 +320,10 @@ int ColorSensor::getColor()
     const float H_GREEN_MAX   = 150.0f;
     const float H_BLUE_MAX    = 270.0f;
 
-    // Yellow override thresholds
-    const float YEL_RB_MIN = 1.20f;      // red must be clearly above blue
-    const float YEL_GB_MIN = 1.20f;      // green must be clearly above blue
-    const float YEL_RG_DIFF_MAX = 0.45f; // red/green should be relatively close
+    // Yellow override thresholds tuned from live logs:
+    // your yellow samples were around r/b~1.59, g/b~1.18, g/r~0.74.
+    const float YEL_RB_MIN = 1.15f;      // red should be above blue
+    const float YEL_GB_MIN = 1.10f;      // green should also be above blue
 
     const int STABLE_COUNT = 3;
 
@@ -350,12 +353,13 @@ int ColorSensor::getColor()
     }
     else {
         // ---- YELLOW DETECTION (before HSV hue) ----
-        // Yellow: red and green both dominate blue, and are not too far apart.
+        // Yellow: red and green both dominate blue, AND green is close to red.
+        // Red:    r >> g -> rg_ratio tends to be low.
         const float rb_y = r0 / std::max(b0, eps);
         const float gb_y = g0 / std::max(b0, eps);
-        const float rg_diff = std::fabs(r0 - g0) / std::max(r0 + g0, eps);
+        const float rg_ratio = g0 / std::max(r0, eps); // close to 1 for yellow, low for red
 
-        if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_diff < YEL_RG_DIFF_MAX) {
+        if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_ratio > 0.68f) {
             candidate = 4; // YELLOW
         } else {
             // Safe normalization for hue

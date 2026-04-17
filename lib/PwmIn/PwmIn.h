@@ -45,6 +45,14 @@ public:
      * @returns the period in seconds
      */
     float period();
+
+    /** Reset the internal timer and period/pulsewidth registers.
+     *
+     * Call after switching the signal source (e.g. TCS3200 S2/S3 channel select)
+     * so that the first rising edge after the switch measures a true period of the
+     * new channel instead of the gap time since the previous channel's last edge.
+     */
+    void resetTimer();
     
     /** Read the current pulsewidth
      *

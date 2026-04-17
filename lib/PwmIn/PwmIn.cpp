@@ -34,6 +34,12 @@ float PwmIn::period() {
     return _period;
 }
 
+void PwmIn::resetTimer() {
+    _t.reset();
+    _period = 0.0f;
+    _pulsewidth = 0.0f;
+}
+
 float PwmIn::pulsewidth() {
     return _pulsewidth;
 }
