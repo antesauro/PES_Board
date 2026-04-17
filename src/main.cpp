@@ -51,7 +51,7 @@ int main()
 
     // --- adding variables and objects and applying functions starts here ---
 
-    ColorSensor color_sensor(PB_3);
+    ColorSensor color_sensor(PB_5);
 
     /* MODULE OBJECTS*/
     LineArrayModule line_array_module;
@@ -90,210 +90,214 @@ int main()
     // start timer
     main_task_timer.start();
 
-    // Turn the sensor LED on for calibration!
+    // Turn the sensor LED on
     color_sensor.switchLed(ON);
 
+    int print_counter = 0;
     while (true) {
         // Read the RAW, uncalibrated frequencies directly from the sensor
         const float *raw_hz = color_sensor.readRawColor();
+        if (print_counter >= 25) {
+            printf("RAW Hz -> R: %5.0f | G: %5.0f | B: %5.0f | C: %5.0f\n", raw_hz[0], raw_hz[1], raw_hz[2], raw_hz[3]);
+            print_counter = 0;
+        }
+        print_counter++;
+        thread_sleep_for(20);
+    }
+    /*
+        while (!toggle_emergency) {
+            main_task_timer.reset();
 
-        printf("RAW Hz -> R: %5.0f | G: %5.0f | B: %5.0f | C: %5.0f\n", raw_hz[0], raw_hz[1], raw_hz[2], raw_hz[3]);
+            ultrasonic_module.update();
 
-        thread_sleep_for(500); // Print twice a second
-        /*
-            while (!toggle_emergency) {
-                main_task_timer.reset();
+            // state machine
+            switch (robot_state) {
+                case RobotState::INITIAL:
+                    printInitialState();
 
-                ultrasonic_module.update();
+                    motor_module.initialize();
+                    servo_module.initialize();
+                    servo_module.center();
+                    robot_state = RobotState::READY;
+                    break;
 
-                // state machine
-                switch (robot_state) {
-                    case RobotState::INITIAL:
-                        printInitialState();
+                case RobotState::READY:
+                    printReadyState();
 
-                        motor_module.initialize();
-                        servo_module.initialize();
-                        servo_module.center();
-                        robot_state = RobotState::READY;
-                        break;
+                    if (do_execute_main_task) {
+                        robot_state = RobotState::START;
+                        led1 = 1;
+                        startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC
+    Motor
 
-                    case RobotState::READY:
-                        printReadyState();
-
-                        if (do_execute_main_task) {
-                            robot_state = RobotState::START;
-                            led1 = 1;
-                            startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC
-        Motor
-
-                        } else {
-                            // the following code block gets executed only once
-                            if (do_reset_all_once) {
-                                do_reset_all_once = false;
-                                // --- variables and objects that should be reset go here ---
-                                // reset variables and objects
-                                robot_state = RobotState::INITIAL;
-                                servo_module.disable();
-                                motor_module.disable();
-                                ultrasonic_module.reset();
-                                startup_rotation = 0.0f;
-                                distance_traveled = 0.0f;
-                                color_pause_timer.stop();
-                                led1 = 0;
-                            }
+                    } else {
+                        // the following code block gets executed only once
+                        if (do_reset_all_once) {
+                            do_reset_all_once = false;
+                            // --- variables and objects that should be reset go here ---
+                            // reset variables and objects
+                            robot_state = RobotState::INITIAL;
+                            servo_module.disable();
+                            motor_module.disable();
+                            ultrasonic_module.reset();
+                            startup_rotation = 0.0f;
+                            distance_traveled = 0.0f;
+                            color_pause_timer.stop();
+                            led1 = 0;
                         }
-
-                        break;
-                    case RobotState::START: {
-                        const bool do_print = (print_cycle_counter == 0);
-                        line_array_module.update(do_print);
-
-                        distance_traveled =
-                            motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
-                        static constexpr float DRIVE_MAX_RPS = 0.5f;
-
-                        // First intersection encounter (noch testen mit Abstand!)
-                        if (distance_traveled >= 0.2f && distance_traveled < 0.8f) {
-                            motor_module.setVelocity(0.5f);      // force speed to not block
-                            servo_module.setSteeringAngle(0.6f); // set turn angle for left turn
-                        } else if (distance_traveled >= 0.8f && distance_traveled < 1.5f) {
-                            motor_module.setVelocity(0.6f);      // force speed to not block
-                            servo_module.setSteeringAngle(0.7f); // set turn angle for left turn to smooth out
-                        } else {
-                            // normal line follow
-                            float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                            motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                            servo_module.setSteeringAngle(line_array_module.steeringCommand());
-                        }
-
-                        if (distance_traveled >= 1.5f) {
-                            robot_state = RobotState::DRIVE;
-                        }
-
-                        print_cycle_counter++;
-                        if (print_cycle_counter >= print_cycle_divider)
-                            print_cycle_counter = 0;
-
-                        break;
                     }
 
-                    case RobotState::DRIVE: {
-                        const bool do_print = (print_cycle_counter == 0);
-                        const uint8_t action_code = line_array_module.update(do_print);
+                    break;
+                case RobotState::START: {
+                    const bool do_print = (print_cycle_counter == 0);
+                    line_array_module.update(do_print);
 
-                        // Scale drive velocity by line deviation (0..max_rps).
-                        // a 0..1 scale, then multiply by the chosen top speed in rps.
-                        static constexpr float DRIVE_MAX_RPS = 1.3f;
+                    distance_traveled =
+                        motor_module.getRotation() - startup_rotation; // Calculate distance traveled by Drive Motor
+                    static constexpr float DRIVE_MAX_RPS = 0.5f;
+
+                    // First intersection encounter (noch testen mit Abstand!)
+                    if (distance_traveled >= 0.2f && distance_traveled < 0.8f) {
+                        motor_module.setVelocity(0.5f);      // force speed to not block
+                        servo_module.setSteeringAngle(0.6f); // set turn angle for left turn
+                    } else if (distance_traveled >= 0.8f && distance_traveled < 1.5f) {
+                        motor_module.setVelocity(0.6f);      // force speed to not block
+                        servo_module.setSteeringAngle(0.7f); // set turn angle for left turn to smooth out
+                    } else {
+                        // normal line follow
+                        float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                        motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                        servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                    }
+
+                    if (distance_traveled >= 1.5f) {
+                        robot_state = RobotState::DRIVE;
+                    }
+
+                    print_cycle_counter++;
+                    if (print_cycle_counter >= print_cycle_divider)
+                        print_cycle_counter = 0;
+
+                    break;
+                }
+
+                case RobotState::DRIVE: {
+                    const bool do_print = (print_cycle_counter == 0);
+                    const uint8_t action_code = line_array_module.update(do_print);
+
+                    // Scale drive velocity by line deviation (0..max_rps).
+                    // a 0..1 scale, then multiply by the chosen top speed in rps.
+                    static constexpr float DRIVE_MAX_RPS = 1.3f;
+                    const float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
+
+                    int raw_color = color_sensor.getColor();
+                    int farbe = 0;
+                    if (raw_color == 3)
+                        farbe = 1; // RED
+                    else if (raw_color == 7)
+                        farbe = 2; // BLUE
+                    else if (raw_color == 4)
+                        farbe = 3; // YELLOW
+                    else if (raw_color == 5)
+                        farbe = 4; // GREEN
+
+                    if (farbe != 0) {
+                        motor_module.stop();
+                        color_pause_timer.reset();
+                        color_pause_timer.start();
+                        robot_state = RobotState::COLOR_PAUSE;
+                    }
+
+                    print_cycle_counter++;
+                    if (print_cycle_counter >= print_cycle_divider)
+                        print_cycle_counter = 0;
+
+                    break;
+                }
+                case RobotState::RETRIEVE: {
+                    printPickupState();
+
+                    break;
+                }
+
+                case RobotState::DELIVER: {
+                    printDeliverState();
+
+                    break;
+                }
+
+                case RobotState::SLEEP:
+                    printSleepState();
+
+                    break;
+
+                case RobotState::EMERGENCY:
+                    printEmergencyState();
+                    motor_module.disable();
+                    servo_module.disable();
+                    // the transition to the emergency state causes the execution of the commands contained
+                    // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
+                    // reset
+                    toggle_emergency = 1;
+                    break;
+
+                case RobotState::COLOR_PAUSE: {
+                    const bool do_print = (print_cycle_counter == 0);
+                    line_array_module.update(do_print);
+
+                    int paused_time_ms = duration_cast<milliseconds>(color_pause_timer.elapsed_time()).count();
+
+                    if (paused_time_ms < 3000) {
+                        motor_module.stop();
+                        servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                    } else {
+                        static constexpr float DRIVE_MAX_RPS = 1.5f;
                         const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                         motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                         servo_module.setSteeringAngle(line_array_module.steeringCommand());
 
+                        // --- CHECK IF WE CLEARED THE COLOR ZONE ---
                         int raw_color = color_sensor.getColor();
-                        int farbe = 0;
-                        if (raw_color == 3)
-                            farbe = 1; // RED
-                        else if (raw_color == 7)
-                            farbe = 2; // BLUE
-                        else if (raw_color == 4)
-                            farbe = 3; // YELLOW
-                        else if (raw_color == 5)
-                            farbe = 4; // GREEN
-
-                        if (farbe != 0) {
-                            motor_module.stop();
-                            color_pause_timer.reset();
-                            color_pause_timer.start();
-                            robot_state = RobotState::COLOR_PAUSE;
+                        // If it is NOT Red, Blue, Yellow, or Green...
+                        if (raw_color != 3 && raw_color != 7 && raw_color != 4 && raw_color != 5) {
+                            color_pause_timer.stop();
+                            robot_state = RobotState::DRIVE;
                         }
-
-                        print_cycle_counter++;
-                        if (print_cycle_counter >= print_cycle_divider)
-                            print_cycle_counter = 0;
-
-                        break;
-                    }
-                    case RobotState::RETRIEVE: {
-                        printPickupState();
-
-                        break;
                     }
 
-                    case RobotState::DELIVER: {
-                        printDeliverState();
-
-                        break;
+                    if (do_print) {
+                        printf("Color: %s\n", ColorSensor::getColorString(color_sensor.getColor()));
                     }
 
-                    case RobotState::SLEEP:
-                        printSleepState();
+                    print_cycle_counter++;
+                    if (print_cycle_counter >= print_cycle_divider)
+                        print_cycle_counter = 0;
 
-                        break;
-
-                    case RobotState::EMERGENCY:
-                        printEmergencyState();
-                        motor_module.disable();
-                        servo_module.disable();
-                        // the transition to the emergency state causes the execution of the commands contained
-                        // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
-                        // reset
-                        toggle_emergency = 1;
-                        break;
-
-                    case RobotState::COLOR_PAUSE: {
-                        const bool do_print = (print_cycle_counter == 0);
-                        line_array_module.update(do_print);
-
-                        int paused_time_ms = duration_cast<milliseconds>(color_pause_timer.elapsed_time()).count();
-
-                        if (paused_time_ms < 3000) {
-                            motor_module.stop();
-                            servo_module.setSteeringAngle(line_array_module.steeringCommand());
-                        } else {
-                            static constexpr float DRIVE_MAX_RPS = 1.5f;
-                            const float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                            motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                            servo_module.setSteeringAngle(line_array_module.steeringCommand());
-
-                            // --- CHECK IF WE CLEARED THE COLOR ZONE ---
-                            int raw_color = color_sensor.getColor();
-                            // If it is NOT Red, Blue, Yellow, or Green...
-                            if (raw_color != 3 && raw_color != 7 && raw_color != 4 && raw_color != 5) {
-                                color_pause_timer.stop();
-                                robot_state = RobotState::DRIVE;
-                            }
-                        }
-
-                        if (do_print) {
-                            printf("Color: %s\n", ColorSensor::getColorString(color_sensor.getColor()));
-                        }
-
-                        print_cycle_counter++;
-                        if (print_cycle_counter >= print_cycle_divider)
-                            print_cycle_counter = 0;
-
-                        break;
-                    }
-
-                    default:
-                        break; // do nothing
+                    break;
                 }
 
-                // toggling the user led
-                user_led = !user_led;
-
-                // --- code that runs every cycle at the end goes here ---
-
-                // printf("US Sensor in cm: %f\n", ultrasonic_module.distanceCm());
-
-                // read timer and make the main thread sleep for the remaining time span (non blocking)
-                int main_task_elapsed_time_ms = duration_cast<milliseconds>(main_task_timer.elapsed_time()).count();
-                if (main_task_period_ms - main_task_elapsed_time_ms < 0)
-                    printMainLoopOverrunWarning();
-                else
-                    thread_sleep_for(main_task_period_ms - main_task_elapsed_time_ms);
+                default:
+                    break; // do nothing
             }
-        }*/
+
+            // toggling the user led
+            user_led = !user_led;
+
+            // --- code that runs every cycle at the end goes here ---
+
+            // printf("US Sensor in cm: %f\n", ultrasonic_module.distanceCm());
+
+            // read timer and make the main thread sleep for the remaining time span (non blocking)
+            int main_task_elapsed_time_ms = duration_cast<milliseconds>(main_task_timer.elapsed_time()).count();
+            if (main_task_period_ms - main_task_elapsed_time_ms < 0)
+                printMainLoopOverrunWarning();
+            else
+                thread_sleep_for(main_task_period_ms - main_task_elapsed_time_ms);
+        }
     }
+}*/
 }
 void toggle_do_execute_main_fcn()
 {

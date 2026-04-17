@@ -113,8 +113,8 @@ void ColorSensor::setCalibration()
                                        // store it as the black reference (dark level)
     m_reference_black.green = 2823.0f; // measure the average raw frequency of the green channel with a black surface
                                        // and store it as the black reference (dark level)
-    m_reference_black.blue = 4405.0f; // measure the average raw frequency of the blue channel with a black surface and
-                                      // store it as the black reference (dark level)
+    m_reference_black.blue = 4405.0f;  // measure the average raw frequency of the blue channel with a black surface and
+                                       // store it as the black reference (dark level)
     m_reference_black.white = 11136.0f; // measure the average raw frequency of the clear channel with a black surface
                                         // and store it as the black reference (dark level)
 
@@ -122,8 +122,8 @@ void ColorSensor::setCalibration()
                                        // store it as the white reference (normalization / white balance)
     m_reference_white.green = 4938.0f; // measure the average raw frequency of the green channel with a white surface
                                        // and store it as the white reference (normalization / white balance)
-    m_reference_white.blue = 7711.0f; // measure the average raw frequency of the blue channel with a white surface and
-                                      // store it as the white reference (normalization / white balance)
+    m_reference_white.blue = 7711.0f;  // measure the average raw frequency of the blue channel with a white surface and
+                                       // store it as the white reference (normalization / white balance)
     m_reference_white.white = 14064.0f; // measure the average raw frequency of the clear channel with a white surface
                                         // and store it as the white reference (normalization / white balance)
 
@@ -239,7 +239,7 @@ void ColorSensor::threadTask()
         for (int i = 0; i < 4; i++) {
             setColor(m_color[i]);
             // Allow filter switching and output frequency to stabilize.
-            ThisThread::sleep_for(25ms);
+            ThisThread::sleep_for(100ms);
 
             // PwmIn::period() returns the measured signal period (typically in seconds).
             float period = m_PwmIn.period();
