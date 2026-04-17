@@ -151,18 +151,20 @@ int main()
                 print_cycle_counter++;
                 if (print_cycle_counter >= print_cycle_divider)
                     print_cycle_counter = 0;
-/*
+
                 if (house_event_cooldown_cycles > 0)
                     house_event_cooldown_cycles--;
 
                 if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
+                    motor_module.setVelocity(0.0f); // stop the robot before picking up
                     robot_state = RobotState::PICKUP;
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                     
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
+                    motor_module.setVelocity(0.0f); // stop the robot before delivering
                     robot_state = RobotState::DELIVER;
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                }*/
+                }
                 break;
             }
             case RobotState::PICKUP: {
