@@ -46,6 +46,7 @@ void goToStoragePosition(int pos)
         g_servo_drehkranz->setSteeringAngle(gripper_cfg::LAGER_POS_4_D);
         g_servo_lenkung->setSteeringAngle(gripper_cfg::LAGER_POS_4_L);
     }
+    thread_sleep_for(500);
 }
 
 void pickOrDropStorage(int pos, float seil_umdrehungen)
@@ -133,12 +134,14 @@ void moveToTunnelAfterPickup()
 {
     g_servo_drehkranz->setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel);
     g_servo_lenkung->setSteeringAngle(0.25f);
+    thread_sleep_for(500);
 }
 
 void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen)
 {
     g_servo_drehkranz->setSteeringAngle(drehkranz_angle);
     g_servo_lenkung->setSteeringAngle(lenkung_angle);
+    thread_sleep_for(500);
     g_motor_arm->setAndWait(seil_umdrehungen);
     g_motor_arm->setAndWait(seil_umdrehungen * -1.0f);
 }
@@ -215,6 +218,7 @@ void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umd
 {
     g_servo_drehkranz->setSteeringAngle(drehkranz_angle);
     g_servo_lenkung->setSteeringAngle(lenkung_angle);
+    thread_sleep_for(500);
     g_motor_arm->setAndWait(seil_umdrehungen);
     g_motor_arm->setAndWait(seil_umdrehungen * -1.0f);
 }

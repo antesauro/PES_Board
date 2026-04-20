@@ -17,6 +17,16 @@ void MotorModuleArm::set(float rotations)
     m_motor.setRotation(rotations);
 }
 
+void MotorModuleArm::setVelocity(float velocity_rps)
+{
+    m_motor.setVelocity(velocity_rps);
+}
+
+float MotorModuleArm::get() const
+{
+    return m_motor.getRotation();
+}
+
 bool MotorModuleArm::setAndWait(float rotations, float tolerance, int timeout_ms)
 {
     m_motor.setRotation(rotations);

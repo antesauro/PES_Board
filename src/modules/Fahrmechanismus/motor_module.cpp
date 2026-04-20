@@ -19,7 +19,7 @@ void MotorModule::initialize()
 
 void MotorModule::setVelocity(float velocity_rps)
 {
-    m_motor.setVelocity(velocity_rps);
+    m_motor.setVelocity(-velocity_rps); // negiert wegen umgekehrter Motoreinbaurichtung
 }
 
 void MotorModule::setRotation(float rotations)

@@ -11,6 +11,12 @@ public:
     // Set target motor position in rotations.
     void set(float rotations);
 
+    // Command motor velocity in rotations per second.
+    void setVelocity(float velocity_rps);
+
+    // Read current motor position in rotations.
+    float get() const;
+
     // Set target rotation and block until reached (or timeout).
     bool setAndWait(float rotations, float tolerance = 0.03f, int timeout_ms = 3000);
 
