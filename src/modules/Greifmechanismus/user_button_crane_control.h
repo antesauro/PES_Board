@@ -13,7 +13,7 @@ public:
         MotorModuleArm& crane_rope_motor,
         Callback<void()> short_press_callback,
         int long_press_ms = 5000,
-        float manual_up_velocity_rps = -0.05f);
+        float manual_up_velocity_rps = 1.0f);
 
     void initialize();
     void update();

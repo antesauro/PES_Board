@@ -1,5 +1,7 @@
 #pragma once
 
+class MotorModuleArm;
+
 namespace gripper_cfg {
 
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
@@ -45,8 +47,13 @@ namespace gripper_actuators
 {
 void initializeDrehkranzServo();
 void initializeLenkungServo();
+void initializeArmMotor();
+void initializeAll();
+MotorModuleArm& getArmMotor();
 void disableDrehkranzServo();
 void disableLenkungServo();
+void disableArmMotor();
+void disableAll();
 }
 
 static constexpr int K_LAGER_PLAETZE = 4;

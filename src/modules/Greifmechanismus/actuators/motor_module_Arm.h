@@ -8,6 +8,9 @@ class MotorModuleArm
 public:
     MotorModuleArm();
 
+    // Initialize motor to zero position and velocity.
+    void initialize();
+
     // Set target motor position in rotations.
     void set(float rotations);
 
@@ -21,8 +24,8 @@ public:
     bool setAndWait(float rotations, float tolerance = 0.03f, int timeout_ms = 3000);
 
     // Motor enable/disable
-    void enableMotors() { m_enableMotors = 1; }
-    void disableMotors() { m_enableMotors = 0; }
+    void enableMotors();
+    void disableMotors();
 
 private:
     static constexpr float GEAR_RATIO  = 78.125f;
@@ -31,4 +34,7 @@ private:
 
     DigitalOut m_enableMotors;
     DCMotor m_motor;
+    bool m_initialized{false};
+
+    void ensureReadyForCommand();
 };

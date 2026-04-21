@@ -16,6 +16,7 @@
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
+static constexpr float CRANE_MANUAL_UP_VELOCITY_RPS = 1.0f;
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -52,8 +53,13 @@ int main()
     MotorModule motor_module;
     aufnehmen::AufnehmenModule aufnehmen_module;
     abladen::AbladenModule abladen_module;
-    MotorModuleArm crane_rope_motor;
-    UserButtonCraneControl user_button_crane_control(BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 5000, -0.25f);
+    MotorModuleArm& crane_rope_motor = gripper_actuators::getArmMotor();
+    UserButtonCraneControl user_button_crane_control(
+        BUTTON1,
+        crane_rope_motor,
+        callback(&toggle_do_execute_main_fcn),
+        5000,
+        CRANE_MANUAL_UP_VELOCITY_RPS);
     
     user_button_crane_control.initialize();
 

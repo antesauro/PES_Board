@@ -4,15 +4,29 @@
 #include "actuators/motor_module_Arm.h"
 
 namespace {
-arm_drehkranz::ServoModule* g_servo_drehkranz = nullptr;
-arm_lenkung::ServoModule* g_servo_lenkung = nullptr;
-MotorModuleArm* g_motor_arm = nullptr;
+arm_drehkranz::ServoModule& drehkranzServo()
+{
+    static arm_drehkranz::ServoModule instance;
+    return instance;
+}
+
+arm_lenkung::ServoModule& lenkungServo()
+{
+    static arm_lenkung::ServoModule instance;
+    return instance;
+}
+
+MotorModuleArm& armMotor()
+{
+    static MotorModuleArm instance;
+    return instance;
+}
 
 void initActuators()
 {
-    if (!g_servo_drehkranz) g_servo_drehkranz = new arm_drehkranz::ServoModule();
-    if (!g_servo_lenkung) g_servo_lenkung = new arm_lenkung::ServoModule();
-    if (!g_motor_arm) g_motor_arm = new MotorModuleArm();
+    (void)drehkranzServo();
+    (void)lenkungServo();
+    (void)armMotor();
 }
 }
 
@@ -21,27 +35,59 @@ namespace gripper_actuators
 void initializeDrehkranzServo()
 {
     initActuators();
-    g_servo_drehkranz->initialize();
-    g_servo_drehkranz->enable();
+    drehkranzServo().initialize();
+    drehkranzServo().enable();
 }
 
 void initializeLenkungServo()
 {
     initActuators();
-    g_servo_lenkung->initialize();
-    g_servo_lenkung->enable();
+    lenkungServo().initialize();
+    lenkungServo().enable();
+}
+
+void initializeArmMotor()
+{
+    initActuators();
+    armMotor().initialize();
+}
+
+void initializeAll()
+{
+    initializeDrehkranzServo();
+    initializeLenkungServo();
+    initializeArmMotor();
+}
+
+MotorModuleArm& getArmMotor()
+{
+    initActuators();
+    return armMotor();
 }
 
 void disableDrehkranzServo()
 {
     initActuators();
-    g_servo_drehkranz->disable();
+    drehkranzServo().disable();
 }
 
 void disableLenkungServo()
 {
     initActuators();
-    g_servo_lenkung->disable();
+    lenkungServo().disable();
+}
+
+void disableArmMotor()
+{
+    initActuators();
+    armMotor().disableMotors();
+}
+
+void disableAll()
+{
+    disableDrehkranzServo();
+    disableLenkungServo();
+    disableArmMotor();
 }
 }
 
@@ -63,17 +109,17 @@ namespace {
 void goToStoragePosition(int pos)
 {
     if (pos == 1) {
-        g_servo_drehkranz->setSteeringAngle(gripper_cfg::LAGER_POS_1_D);
-        g_servo_lenkung->setSteeringAngle(gripper_cfg::LAGER_POS_1_L);
+        drehkranzServo().setSteeringAngle(gripper_cfg::LAGER_POS_1_D);
+        lenkungServo().setSteeringAngle(gripper_cfg::LAGER_POS_1_L);
     } else if (pos == 2) {
-        g_servo_drehkranz->setSteeringAngle(gripper_cfg::LAGER_POS_2_D);
-        g_servo_lenkung->setSteeringAngle(gripper_cfg::LAGER_POS_2_L);
+        drehkranzServo().setSteeringAngle(gripper_cfg::LAGER_POS_2_D);
+        lenkungServo().setSteeringAngle(gripper_cfg::LAGER_POS_2_L);
     } else if (pos == 3) {
-        g_servo_drehkranz->setSteeringAngle(gripper_cfg::LAGER_POS_3_D);
-        g_servo_lenkung->setSteeringAngle(gripper_cfg::LAGER_POS_3_L);
+        drehkranzServo().setSteeringAngle(gripper_cfg::LAGER_POS_3_D);
+        lenkungServo().setSteeringAngle(gripper_cfg::LAGER_POS_3_L);
     } else if (pos == 4) {
-        g_servo_drehkranz->setSteeringAngle(gripper_cfg::LAGER_POS_4_D);
-        g_servo_lenkung->setSteeringAngle(gripper_cfg::LAGER_POS_4_L);
+        drehkranzServo().setSteeringAngle(gripper_cfg::LAGER_POS_4_D);
+        lenkungServo().setSteeringAngle(gripper_cfg::LAGER_POS_4_L);
     }
     thread_sleep_for(500);
 }
@@ -81,8 +127,8 @@ void goToStoragePosition(int pos)
 void pickOrDropStorage(int pos, float seil_umdrehungen)
 {
     goToStoragePosition(pos);
-    g_motor_arm->setAndWait(seil_umdrehungen);
-    g_motor_arm->setAndWait(seil_umdrehungen * -1.0f);
+    armMotor().setAndWait(seil_umdrehungen);
+    armMotor().setAndWait(seil_umdrehungen * -1.0f);
 }
 
 float getStorageRopeTurnsForPos(int pos)
@@ -161,24 +207,24 @@ namespace aufnehmen
 namespace {
 void moveToTunnelAfterPickup()
 {
-    g_servo_drehkranz->setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel);
-    g_servo_lenkung->setSteeringAngle(0.25f);
+    drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel);
+    lenkungServo().setSteeringAngle(0.25f);
     thread_sleep_for(500);
 }
 
 void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen)
 {
-    g_servo_drehkranz->setSteeringAngle(drehkranz_angle);
-    g_servo_lenkung->setSteeringAngle(lenkung_angle);
+    drehkranzServo().setSteeringAngle(drehkranz_angle);
+    lenkungServo().setSteeringAngle(lenkung_angle);
     thread_sleep_for(500);
-    g_motor_arm->setAndWait(seil_umdrehungen);
-    g_motor_arm->setAndWait(seil_umdrehungen * -1.0f);
+    armMotor().setAndWait(seil_umdrehungen);
+    armMotor().setAndWait(seil_umdrehungen * -1.0f);
 }
 }
 
 AufnehmenModule::AufnehmenModule()
 {
-    initActuators();
+    gripper_actuators::initializeAll();
 }
 
 void AufnehmenModule::aufnehmenRot()
@@ -247,17 +293,17 @@ namespace abladen
 namespace {
 void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen)
 {
-    g_servo_drehkranz->setSteeringAngle(drehkranz_angle);
-    g_servo_lenkung->setSteeringAngle(lenkung_angle);
+    drehkranzServo().setSteeringAngle(drehkranz_angle);
+    lenkungServo().setSteeringAngle(lenkung_angle);
     thread_sleep_for(500);
-    g_motor_arm->setAndWait(seil_umdrehungen);
-    g_motor_arm->setAndWait(seil_umdrehungen * -1.0f);
+    armMotor().setAndWait(seil_umdrehungen);
+    armMotor().setAndWait(seil_umdrehungen * -1.0f);
 }
 }
 
 AbladenModule::AbladenModule()
 {
-    initActuators();
+    gripper_actuators::initializeAll();
 }
 
 void AbladenModule::abladenRot()
