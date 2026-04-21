@@ -18,6 +18,10 @@ void ServoModule::initialize()
 {
     m_servo.calibratePulseMinMax(SERVO_D1_ANG_MIN, SERVO_D1_ANG_MAX);
     m_servo.setMaxAcceleration(1.0e6f); // no acceleration limit
+}
+
+void ServoModule::enable()
+{
     if (!m_servo.isEnabled()) {
         m_servo.enable(SERVO_START_POSITION_D1);
     }
@@ -52,6 +56,10 @@ void ServoModule::initialize()
 {
     m_servo.calibratePulseMinMax(SERVO_D2_ANG_MIN, SERVO_D2_ANG_MAX);
     m_servo.setMaxAcceleration(1.0e6f); // no acceleration limit
+}
+
+void ServoModule::enable()
+{
     if (!m_servo.isEnabled()) {
         m_servo.enable(SERVO_START_POSITION_D2);
     }

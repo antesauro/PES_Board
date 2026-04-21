@@ -16,6 +16,35 @@ void initActuators()
 }
 }
 
+namespace gripper_actuators
+{
+void initializeDrehkranzServo()
+{
+    initActuators();
+    g_servo_drehkranz->initialize();
+    g_servo_drehkranz->enable();
+}
+
+void initializeLenkungServo()
+{
+    initActuators();
+    g_servo_lenkung->initialize();
+    g_servo_lenkung->enable();
+}
+
+void disableDrehkranzServo()
+{
+    initActuators();
+    g_servo_drehkranz->disable();
+}
+
+void disableLenkungServo()
+{
+    initActuators();
+    g_servo_lenkung->disable();
+}
+}
+
 namespace gripper_cfg
 {
 bool lager = false;
@@ -150,8 +179,6 @@ void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdr
 AufnehmenModule::AufnehmenModule()
 {
     initActuators();
-    g_servo_drehkranz->initialize();
-    g_servo_lenkung->initialize();
 }
 
 void AufnehmenModule::aufnehmenRot()
@@ -159,7 +186,8 @@ void AufnehmenModule::aufnehmenRot()
     performPickupAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB
+                    );
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -173,7 +201,8 @@ void AufnehmenModule::aufnehmenBlau()
     performPickupAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN
+            );
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -187,7 +216,8 @@ void AufnehmenModule::aufnehmenGelb()
     performPickupAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB
+                    );
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -201,7 +231,8 @@ void AufnehmenModule::aufnehmenGruen()
     performPickupAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN
+                    );
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -227,8 +258,6 @@ void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umd
 AbladenModule::AbladenModule()
 {
     initActuators();
-    g_servo_drehkranz->initialize();
-    g_servo_lenkung->initialize();
 }
 
 void AbladenModule::abladenRot()
@@ -237,7 +266,8 @@ void AbladenModule::abladenRot()
     performDropoffAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB
+                    );
 }
 
 void AbladenModule::abladenBlau()
@@ -246,7 +276,8 @@ void AbladenModule::abladenBlau()
     performDropoffAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN
+                    );
 }
 
 void AbladenModule::abladenGelb()
@@ -255,7 +286,8 @@ void AbladenModule::abladenGelb()
     performDropoffAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB
+                    );
 }
 
 void AbladenModule::abladenGruen()
@@ -264,6 +296,7 @@ void AbladenModule::abladenGruen()
     performDropoffAt(
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN);
+        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN
+                    );
 }
-} // namespace abladen
+}

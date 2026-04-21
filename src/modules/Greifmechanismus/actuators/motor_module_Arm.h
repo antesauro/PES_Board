@@ -20,6 +20,10 @@ public:
     // Set target rotation and block until reached (or timeout).
     bool setAndWait(float rotations, float tolerance = 0.03f, int timeout_ms = 3000);
 
+    // Motor enable/disable
+    void enableMotors() { m_enableMotors = 1; }
+    void disableMotors() { m_enableMotors = 0; }
+
 private:
     static constexpr float GEAR_RATIO  = 78.125f;
     static constexpr float KN          = 180.0f / 12.0f; // rpm/V

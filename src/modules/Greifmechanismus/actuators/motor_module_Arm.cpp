@@ -6,12 +6,18 @@
 
 MotorModuleArm::MotorModuleArm() :
     m_enableMotors(PB_ENABLE_DCMOTORS),
-    m_motor(PB_PWM_M3, PB_ENC_A_M3, PB_ENC_B_M3, GEAR_RATIO, KN, VOLTAGE_MAX)
+    m_motor(PB_PWM_M2, PB_ENC_A_M2, PB_ENC_B_M2, GEAR_RATIO, KN, VOLTAGE_MAX)
 {
     m_enableMotors = 1;
     m_motor.enableMotionPlanner();
 }
-
+void MotorModule::initialize()
+{
+    m_enableMotors = 1;
+    m_motor.setMotionPlannerVelocity(0.0f);
+    m_motor.setMotionPlannerPosition(0.0f);
+    m_motor.enableMotionPlanner();
+}
 void MotorModuleArm::set(float rotations)
 {
     m_motor.setRotation(rotations);

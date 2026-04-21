@@ -31,6 +31,7 @@ void UserButtonCraneControl::update()
     if (m_debug_pressed) {
         m_debug_pressed = false;
         printf("DEBUG: Button pressed\n");
+        // ...existing code...
     }
 
     if (m_debug_released_ms >= 0) {
@@ -91,6 +92,7 @@ void UserButtonCraneControl::startManualUp()
     }
 
     m_manual_up_active = true;
+    m_crane_rope_motor.enableMotors(); // Motor aktivieren
     m_crane_rope_motor.setVelocity(m_manual_up_velocity_rps);
     printf("Long press erkannt: Seilmotor faehrt sehr langsam nach oben solange Taste gedrueckt ist.\n");
 }
@@ -102,6 +104,7 @@ void UserButtonCraneControl::stopManualUp()
     }
 
     m_crane_rope_motor.setVelocity(0.0f);
+    m_crane_rope_motor.disableMotors(); // Motor deaktivieren
     m_manual_up_active = false;
     printf("Taste losgelassen: Seilmotor gestoppt.\n");
 }

@@ -53,7 +53,8 @@ int main()
     aufnehmen::AufnehmenModule aufnehmen_module;
     abladen::AbladenModule abladen_module;
     MotorModuleArm crane_rope_motor;
-    UserButtonCraneControl user_button_crane_control(BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 5000, -0.05f);
+    UserButtonCraneControl user_button_crane_control(BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 5000, -0.25f);
+    
     user_button_crane_control.initialize();
 
     bool rot_abgegeben   = false;
@@ -99,9 +100,16 @@ int main()
             case RobotState::INITIAL:
                 printInitialState();
 
+                // Fahr-Servo initialisieren und aktivieren
                 motor_module.initialize();
                 servo_module.initialize();
                 servo_module.center();
+                // Greifmechanismus-Servos initialisieren und aktivieren
+                gripper_actuators::initializeDrehkranzServo();
+                gripper_actuators::initializeLenkungServo();
+                crane_rope_motor.enableMotors();
+
+                
                 color_sensor_module.update();
 
                 robot_state = RobotState::READY;
@@ -123,6 +131,9 @@ int main()
                         robot_state = RobotState::INITIAL;
                         servo_module.disable();
                         motor_module.disable();
+                        gripper_actuators::disableDrehkranzServo();
+                        gripper_actuators::disableLenkungServo();
+                        crane_rope_motor.disableMotors();
                         ultrasonic_module.reset();
                         led1 = 0;
                     }
@@ -263,6 +274,9 @@ int main()
                 printEmergencyState();
                 motor_module.disable();
                 servo_module.disable();
+                gripper_actuators::disableDrehkranzServo();
+                gripper_actuators::disableLenkungServo();
+                crane_rope_motor.disableMotors();
                 // the transition to the emergency state causes the execution of the commands contained
                 // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
                 // reset

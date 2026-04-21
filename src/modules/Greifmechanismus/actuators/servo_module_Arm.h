@@ -9,6 +9,7 @@ public:
     ServoModule();
 
     void initialize();
+    void enable();
     void setSteeringAngle(float angle);
     void center();
     void disable();
@@ -25,6 +26,7 @@ public:
     ServoModule();
 
     void initialize();
+    void enable();
     void setSteeringAngle(float angle);
     void center();
     void disable();

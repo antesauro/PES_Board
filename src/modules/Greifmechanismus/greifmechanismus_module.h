@@ -41,6 +41,14 @@ constexpr float SEIL_ROTATIONEN_LAGER_POS_4 = 2.0f;
 
 }
 
+namespace gripper_actuators
+{
+void initializeDrehkranzServo();
+void initializeLenkungServo();
+void disableDrehkranzServo();
+void disableLenkungServo();
+}
+
 static constexpr int K_LAGER_PLAETZE = 4;
 static constexpr int K_LAGER_LEER = 0;
 static constexpr int K_FARBE_ROT = 1;
