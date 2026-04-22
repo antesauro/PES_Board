@@ -5,7 +5,7 @@ class MotorModuleArm;
 namespace gripper_cfg {
 
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.0f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.75f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.083f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.344f;
 
