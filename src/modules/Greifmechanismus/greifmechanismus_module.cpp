@@ -214,8 +214,8 @@ void moveToTunnelAfterPickup()
 
 void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen)
 {
-    drehkranzServo().setSteeringAngle(drehkranz_angle);
-    lenkungServo().setSteeringAngle(lenkung_angle);
+    drehkranzServo().setSteeringAngle(-drehkranz_angle);
+    lenkungServo().setSteeringAngle(-lenkung_angle);
     thread_sleep_for(500);
     armMotor().setAndWait(seil_umdrehungen);
     armMotor().setAndWait(seil_umdrehungen * -1.0f);
@@ -293,8 +293,8 @@ namespace abladen
 namespace {
 void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen)
 {
-    drehkranzServo().setSteeringAngle(drehkranz_angle);
-    lenkungServo().setSteeringAngle(lenkung_angle);
+    drehkranzServo().setSteeringAngle(-drehkranz_angle);
+    lenkungServo().setSteeringAngle(-lenkung_angle);
     thread_sleep_for(500);
     armMotor().setAndWait(seil_umdrehungen);
     armMotor().setAndWait(seil_umdrehungen * -1.0f);
