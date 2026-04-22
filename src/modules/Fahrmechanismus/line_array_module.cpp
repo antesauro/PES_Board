@@ -19,7 +19,7 @@ static constexpr float CORRECTION_ALPHA = 0.5f;  // Keep the EMA filter for smoo
 static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
-static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0xFF;
+static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
 
 float clampf(float value, float minValue, float maxValue)
 {
@@ -65,9 +65,9 @@ uint8_t LineArrayModule::update(bool do_print)
     m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
-    if (raw == SENSOR_MASK_ALL_BITS)
+    if (raw == SENSOR_MASK_B2_TO_B5)
         event = EVENT_DELIVERY_HOUSE;
-    else if (raw == SENSOR_MASK_B2_TO_B5)
+    else if (raw == SENSOR_MASK_ALL_BITS)
         event = EVENT_PICKUP_HOUSE;
 
     // --- NON-LINEAR P CONTROLLER MATH ---

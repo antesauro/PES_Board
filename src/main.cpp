@@ -4,27 +4,26 @@
 #include "PESBoardPinMap.h"
 
 // drivers
-#include "DebounceIn.h"
 #include "modules/Fahrmechanismus/color_sensor_module.h"
 #include "modules/Fahrmechanismus/debug_print.h"
 #include "modules/Fahrmechanismus/line_array_module.h"
 #include "modules/Fahrmechanismus/motor_module.h"
 #include "modules/Fahrmechanismus/servo_module.h"
 #include "modules/Greifmechanismus/greifmechanismus_module.h"
+#include "modules/Greifmechanismus/actuators/motor_module_Arm.h"
+#include "modules/Greifmechanismus/user_button_crane_control.h"
 #include "modules/ultrasonic_module.h"
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
+static constexpr float CRANE_MANUAL_UP_VELOCITY_RPS = 1.0f;
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
 bool do_reset_all_once = false;    // this variable is used to reset certain variables and objects and
                                    // shows how you can run a code segment only once
 
-// objects for user button (blue button) handling on nucleo board
-DebounceIn user_button(BUTTON1);   // create DebounceIn to evaluate the user button
-void toggle_do_execute_main_fcn(); // custom function which is getting executed when user
-                                   // button gets pressed, definition at the end
+void toggle_do_execute_main_fcn();
 
 // main runs as an own thread
 int main()
@@ -34,11 +33,6 @@ int main()
     const int main_task_period_ms = 20; // main loop period in ms (50 Hz)
     const int print_period_ms = 250;    // print interval in ms
     Timer main_task_timer;
-
-    /* INPUT OBJECTS*/
-
-    // attach button fall function address to user button object
-    user_button.fall(&toggle_do_execute_main_fcn);
 
     /* OUTPUT OBJECTS*/
     // led on nucleo board
@@ -59,6 +53,15 @@ int main()
     MotorModule motor_module;
     aufnehmen::AufnehmenModule aufnehmen_module;
     abladen::AbladenModule abladen_module;
+    MotorModuleArm& crane_rope_motor = gripper_actuators::getArmMotor();
+    UserButtonCraneControl user_button_crane_control(
+        BUTTON1,
+        crane_rope_motor,
+        callback(&toggle_do_execute_main_fcn),
+        5000,
+        CRANE_MANUAL_UP_VELOCITY_RPS);
+    
+    user_button_crane_control.initialize();
 
     bool rot_abgegeben   = false;
     bool gelb_abgegeben  = false;
@@ -94,6 +97,8 @@ int main()
     
     while (!toggle_emergency) {
         main_task_timer.reset();
+
+        user_button_crane_control.update();
         
         ultrasonic_module.update();
         // state machine
@@ -101,9 +106,16 @@ int main()
             case RobotState::INITIAL:
                 printInitialState();
 
+                // Fahr-Servo initialisieren und aktivieren
                 motor_module.initialize();
                 servo_module.initialize();
                 servo_module.center();
+                // Greifmechanismus-Servos initialisieren und aktivieren
+                gripper_actuators::initializeDrehkranzServo();
+                gripper_actuators::initializeLenkungServo();
+                crane_rope_motor.enableMotors();
+
+                
                 color_sensor_module.update();
 
                 robot_state = RobotState::READY;
@@ -125,6 +137,9 @@ int main()
                         robot_state = RobotState::INITIAL;
                         servo_module.disable();
                         motor_module.disable();
+                        gripper_actuators::disableDrehkranzServo();
+                        gripper_actuators::disableLenkungServo();
+                        crane_rope_motor.disableMotors();
                         ultrasonic_module.reset();
                         led1 = 0;
                     }
@@ -133,15 +148,9 @@ int main()
                 break;
 
             case RobotState::DRIVE: {
+
                 const bool do_print = (print_cycle_counter == 0);
                 const uint8_t action_code = line_array_module.update(do_print);
-
-                // Scale drive velocity by line deviation (0..max_rps).
-                // a 0..1 scale, then multiply by the chosen top speed in rps.
-                static constexpr float DRIVE_MAX_RPS = 1.0f; // tune as needed max at 1.5
-                const float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                servo_module.setSteeringAngle(line_array_module.steeringCommand());
 
                 color_sensor_module.update();
                 if (do_print) {
@@ -151,47 +160,58 @@ int main()
                 print_cycle_counter++;
                 if (print_cycle_counter >= print_cycle_divider)
                     print_cycle_counter = 0;
-/*
+
                 if (house_event_cooldown_cycles > 0)
                     house_event_cooldown_cycles--;
 
+                // Event-Prüfung VOR dem Motor-Setzen:
+                // wenn ein Haus erkannt wird, zuerst stoppen – nicht erst fahren und dann stoppen.
                 if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
+                    motor_module.setVelocity(0.0f);
                     robot_state = RobotState::PICKUP;
+                    printf("Abholhaus erkannt! Farbe: %d\n", color_sensor_module.detectedPackageColor());
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                    
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
+                    motor_module.setVelocity(0.0f);
                     robot_state = RobotState::DELIVER;
+                    printf("Lieferhaus erkannt! Farbe: %d\n", color_sensor_module.detectedPackageColor());
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
-                }*/
+                } else {
+                    static constexpr float DRIVE_MAX_RPS = 1.0f;
+                    const float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                }
+
                 break;
             }
             case RobotState::PICKUP: {
                 printPickupState();
                     color_sensor_module.update();
-                    const int farbe = color_sensor_module.detectedPackageColor();
+                    int farbe = color_sensor_module.detectedPackageColor();
 
                     if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenRot(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 1;}
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenBlau(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 2;}
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenGelb(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 3;}
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenGruen(); if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 4;}
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     
                 break;
@@ -202,35 +222,35 @@ int main()
             case RobotState::DELIVER: {
                     printDeliverState();
 
-                    const int farbe = color_sensor_module.detectedPackageColor();
+                    int farbe = color_sensor_module.detectedPackageColor();
                     
                     if (farbe == 1 and !rot_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 1)) 
                     { abladen_module.abladenRot();
                         rot_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 2)) 
                     { abladen_module.abladenBlau();
                         blau_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 3)) 
                     { abladen_module.abladenGelb();
                         gelb_abgegeben = true;
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;
+                            robot_state = RobotState::READY;
                     }
                     else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 4)) 
                     { abladen_module.abladenGruen();
                         gruen_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::DRIVE;  
+                            robot_state = RobotState::READY;  
                     }
                     else if (rot_abgegeben and blau_abgegeben and gelb_abgegeben and gruen_abgegeben) 
                     { 
@@ -244,8 +264,8 @@ int main()
                     }
                     else 
                     {
-                        // if the detected color has already been given or wrong house, go back to DRIVE state  
-                        robot_state = RobotState::DRIVE;
+                        // falsches Haus oder Farbe bereits abgegeben → zurück zu READY, Button nötig
+                        robot_state = RobotState::READY;
                     }
                 break;
             }
@@ -260,6 +280,9 @@ int main()
                 printEmergencyState();
                 motor_module.disable();
                 servo_module.disable();
+                gripper_actuators::disableDrehkranzServo();
+                gripper_actuators::disableLenkungServo();
+                crane_rope_motor.disableMotors();
                 // the transition to the emergency state causes the execution of the commands contained
                 // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a
                 // reset

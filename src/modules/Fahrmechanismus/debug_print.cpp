@@ -7,49 +7,49 @@
 void printInitialState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("INITIAL\n");
+    printf("INITIAL\n");
 #endif
 }
 
 void printReadyState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("READY\n");
+    printf("READY\n");
 #endif
 }
 
 void printRetrieveState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("RETRIEVE\n");
+    printf("RETRIEVE\n");
 #endif
 }
 
 void printPickupState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("PICKUP\n");
+    printf("PICKUP\n");
 #endif
 }
 
 void printDeliverState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("DELIVER\n");
+    printf("DELIVER\n");
 #endif
 }
 
 void printSleepState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("SLEEP\n");
+    printf("SLEEP\n");
 #endif
 }
 
 void printEmergencyState()
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("EMERGENCY\n");
+    printf("EMERGENCY\n");
 #endif
 }
 
@@ -66,7 +66,7 @@ void printDriveStatus(ColorSensorModule& color_sensor_module)
 void printPickupHouseDistanceMm(int distance_mm)
 {
 #if DEBUG_PRINT_ENABLE
-    // printf("Querlinie Abhol-Haus: %d mm\n", distance_mm);
+    printf("Querlinie Abhol-Haus: %d mm\n", distance_mm);
 #else
     (void)distance_mm;
 #endif
