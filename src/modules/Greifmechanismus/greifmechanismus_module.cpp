@@ -207,8 +207,8 @@ namespace aufnehmen
 namespace {
 void moveToTunnelAfterPickup()
 {
-    drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel);
-    lenkungServo().setSteeringAngle(0.25f);
+    drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
+    lenkungServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_L);
     thread_sleep_for(500);
 }
 
