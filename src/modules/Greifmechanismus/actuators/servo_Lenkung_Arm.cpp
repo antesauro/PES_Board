@@ -2,7 +2,7 @@
 
 #include "PESBoardPinMap.h"
 // The maximum speed for the servo is determined by testing and calibration.
-static constexpr float SERVO_MAX_SPEED = 0.5f; 
+static constexpr float SERVO_MAX_SPEED = 0.18f;
 
 namespace arm_lenkung {
 namespace {
@@ -15,6 +15,11 @@ static constexpr float SERVO_START_POSITION_D1 = 0.5f;
 float constrainNormalized(float value)
 {
     return (value > 1.0f) ? 1.0f : (value < 0.0f) ? 0.0f : value;
+}
+
+float invertNormalized(float value)
+{
+    return 1.0f - constrainNormalized(value);
 }
 }
 
@@ -37,7 +42,7 @@ void ServoModule::enable()
 
 void ServoModule::setSteeringAngle(float angle)
 {
-    m_servo.setPulseWidth(constrainNormalized(angle));
+    m_servo.setPulseWidth(invertNormalized(angle));
 }
 
 void ServoModule::center()
@@ -64,6 +69,11 @@ float constrainNormalized(float value)
 {
     return (value > 1.0f) ? 1.0f : (value < 0.0f) ? 0.0f : value;
 }
+
+float invertNormalized(float value)
+{
+    return 1.0f - constrainNormalized(value);
+}
 }
 
 ServoModule::ServoModule() : m_servo(PC_6)
@@ -85,7 +95,7 @@ void ServoModule::enable()
 
 void ServoModule::setSteeringAngle(float angle)
 {
-    m_servo.setPulseWidth(constrainNormalized(angle));
+    m_servo.setPulseWidth(invertNormalized(angle));
 }
 
 void ServoModule::center()

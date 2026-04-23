@@ -17,6 +17,9 @@
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
 static constexpr float CRANE_MANUAL_UP_VELOCITY_RPS = 1.0f;
+static constexpr float HOUSE_STOP_VELOCITY_THRESHOLD_RPS = 0.03f;
+static constexpr int HOUSE_STOP_CONFIRM_CYCLES = 5;
+static constexpr int HOUSE_STOP_TIMEOUT_MS = 1200;
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not
@@ -70,6 +73,8 @@ int main()
     int schon_ein_paeckchen_aufgenommen = 0;
     int house_event_cooldown_cycles = 0;
     const int house_event_cooldown_set_cycles = 25; // 25 * 20ms = 500ms
+    int house_stop_confirm_cycles = 0;
+    int house_stop_timeout_cycles_remaining = 0;
 
     int print_cycle_counter = 0;
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
@@ -79,8 +84,10 @@ int main()
         INITIAL,
         READY,
         DRIVE,
+        PICKUP_WAIT,
         RETRIEVE,
         PICKUP,
+        DELIVER_WAIT,
         DELIVER,
         SLEEP,
         EMERGENCY
@@ -94,6 +101,7 @@ int main()
 
     // start timer
     main_task_timer.start();
+    const int house_stop_timeout_cycles = HOUSE_STOP_TIMEOUT_MS / main_task_period_ms;
     
     while (!toggle_emergency) {
         main_task_timer.reset();
@@ -167,13 +175,17 @@ int main()
                 // Event-Prüfung VOR dem Motor-Setzen:
                 // wenn ein Haus erkannt wird, zuerst stoppen – nicht erst fahren und dann stoppen.
                 if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
-                    motor_module.setVelocity(0.0f);
-                    robot_state = RobotState::PICKUP;
+                    motor_module.stop();
+                    house_stop_confirm_cycles = 0;
+                    house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
+                    robot_state = RobotState::PICKUP_WAIT;
                     printf("Abholhaus erkannt! Farbe: %d\n", color_sensor_module.detectedPackageColor());
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE) {
-                    motor_module.setVelocity(0.0f);
-                    robot_state = RobotState::DELIVER;
+                    motor_module.stop();
+                    house_stop_confirm_cycles = 0;
+                    house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
+                    robot_state = RobotState::DELIVER_WAIT;
                     printf("Lieferhaus erkannt! Farbe: %d\n", color_sensor_module.detectedPackageColor());
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else {
@@ -185,8 +197,26 @@ int main()
 
                 break;
             }
+            case RobotState::PICKUP_WAIT:
+                motor_module.stop();
+                if (motor_module.getVelocity() <= HOUSE_STOP_VELOCITY_THRESHOLD_RPS &&
+                    motor_module.getVelocity() >= -HOUSE_STOP_VELOCITY_THRESHOLD_RPS) {
+                    house_stop_confirm_cycles++;
+                } else {
+                    house_stop_confirm_cycles = 0;
+                }
+
+                if (house_stop_confirm_cycles >= HOUSE_STOP_CONFIRM_CYCLES ||
+                    house_stop_timeout_cycles_remaining <= 0) {
+                    robot_state = RobotState::PICKUP;
+                } else {
+                    house_stop_timeout_cycles_remaining--;
+                }
+                break;
+
             case RobotState::PICKUP: {
                 printPickupState();
+                    motor_module.stop();
                     color_sensor_module.update();
                     int farbe = color_sensor_module.detectedPackageColor();
 
@@ -218,9 +248,29 @@ int main()
             }
 
 
+            case RobotState::DELIVER_WAIT:
+                motor_module.stop();
+                if (motor_module.getVelocity() <= HOUSE_STOP_VELOCITY_THRESHOLD_RPS &&
+                    motor_module.getVelocity() >= -HOUSE_STOP_VELOCITY_THRESHOLD_RPS) {
+                    house_stop_confirm_cycles++;
+                } else {
+                    house_stop_confirm_cycles = 0;
+                }
+
+                if (house_stop_confirm_cycles >= HOUSE_STOP_CONFIRM_CYCLES ||
+                    house_stop_timeout_cycles_remaining <= 0) {
+                    robot_state = RobotState::DELIVER;
+                } else {
+                    house_stop_timeout_cycles_remaining--;
+                }
+                break;
+
+
 
             case RobotState::DELIVER: {
                     printDeliverState();
+                    motor_module.stop();
+                    color_sensor_module.update();
 
                     int farbe = color_sensor_module.detectedPackageColor();
                     
