@@ -20,6 +20,8 @@ static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
+static constexpr float HOUSE_ANGLE_MAX_RAD = 0.22f;
+static constexpr uint8_t HOUSE_CONFIRM_CYCLES = 2;
 
 float clampf(float value, float minValue, float maxValue)
 {
@@ -35,6 +37,8 @@ LineArrayModule::LineArrayModule()
     , m_centerHoldActive(false)
     , m_centerHoldEnter(0.0f)
     , m_centerHoldExit(0.0f)
+    , m_pickupDetectStreak(0)
+    , m_deliveryDetectStreak(0)
 {
     m_sensorBar.clearInvertBits();
     m_sensorBar.clearBarStrobe();
@@ -47,6 +51,7 @@ uint8_t LineArrayModule::update(bool do_print)
     const uint8_t raw = m_sensorBar.getRaw();
     const bool lineDetected = m_sensorBar.isAnyLedActive();
     const uint8_t numActiveLeds = m_sensorBar.getNrOfLedsActive(); // gets number of active leds from sensor bar
+    const float measuredAngle = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
     float position = 0.0f;
 
     // Crossing logic
@@ -57,7 +62,7 @@ uint8_t LineArrayModule::update(bool do_print)
             position = m_filteredCorrection;
         } else {
             //  Steer normally.
-            position = m_sensorBar.getAngleRad();
+            position = measuredAngle;
         }
     }
 
@@ -66,9 +71,24 @@ uint8_t LineArrayModule::update(bool do_print)
 
     uint8_t event = EVENT_NONE;
     const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
-    if (activeBits == SENSOR_MASK_ALL_BITS || numActiveLeds >= 6) {
+    const bool angleIsCentered = fabsf(measuredAngle) <= HOUSE_ANGLE_MAX_RAD;
+    const bool pickupCandidate = angleIsCentered && (activeBits == SENSOR_MASK_ALL_BITS || numActiveLeds >= 6);
+    const bool deliveryCandidate = angleIsCentered && numActiveLeds >= 4 && numActiveLeds <= 5 &&
+                                   ((activeBits & SENSOR_MASK_B2_TO_B5) == SENSOR_MASK_B2_TO_B5);
+
+    if (pickupCandidate)
+        m_pickupDetectStreak++;
+    else
+        m_pickupDetectStreak = 0;
+
+    if (deliveryCandidate)
+        m_deliveryDetectStreak++;
+    else
+        m_deliveryDetectStreak = 0;
+
+    if (m_pickupDetectStreak >= HOUSE_CONFIRM_CYCLES) {
         event = EVENT_PICKUP_HOUSE;
-    } else if ((activeBits & SENSOR_MASK_B2_TO_B5) == SENSOR_MASK_B2_TO_B5 && numActiveLeds >= 4) {
+    } else if (m_deliveryDetectStreak >= HOUSE_CONFIRM_CYCLES) {
         event = EVENT_DELIVERY_HOUSE;
     }
 
@@ -108,6 +128,8 @@ uint8_t LineArrayModule::update(bool do_print)
         m_steeringCommand = STEERING_CENTER;
         m_driveVoltage = 0.0f;
         m_centerHoldActive = false;
+        m_pickupDetectStreak = 0;
+        m_deliveryDetectStreak = 0;
     }
 
     if (do_print)

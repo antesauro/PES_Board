@@ -34,4 +34,6 @@ private:
     bool m_centerHoldActive;
     float m_centerHoldEnter;
     float m_centerHoldExit;
+    uint8_t m_pickupDetectStreak;
+    uint8_t m_deliveryDetectStreak;
 };
