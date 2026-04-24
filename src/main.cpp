@@ -90,7 +90,8 @@ int main()
         DELIVER_WAIT,
         DELIVER,
         SLEEP,
-        EMERGENCY
+        EMERGENCY,
+        LOSFAHRENN
     } robot_state = RobotState::INITIAL;
 
     // Emergency toggle for the while loop
@@ -143,6 +144,15 @@ int main()
                         // --- variables and objects that should be reset go here ---
                         // reset variables and objects
                         robot_state = RobotState::INITIAL;
+                        rot_abgegeben = false;
+                        gelb_abgegeben = false;
+                        blau_abgegeben = false;
+                        gruen_abgegeben = false;
+                        schon_ein_paeckchen_aufgenommen = 0;
+                        house_event_cooldown_cycles = 0;
+                        house_stop_confirm_cycles = 0;
+                        house_stop_timeout_cycles_remaining = 0;
+                        print_cycle_counter = 0;
                         servo_module.disable();
                         motor_module.disable();
                         gripper_actuators::disableDrehkranzServo();
@@ -224,26 +234,30 @@ int main()
                     { aufnehmen_module.aufnehmenRot(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 1;}
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenBlau(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 2;}
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenGelb(); 
                         if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 3;}
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen==0)) 
                     { aufnehmen_module.aufnehmenGruen(); if (!gripper_cfg::lager) 
                             {schon_ein_paeckchen_aufgenommen = 4;}
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
-                    
+                    else 
+                    {
+                        // kein Paket erkannt oder falsche Farbe erkannt → zurück zu READY, Button nötig
+                        robot_state = RobotState::LOSFAHRENN;
+                    }
                 break;
             }
 
@@ -279,28 +293,28 @@ int main()
                         rot_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 2 and !blau_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 2)) 
                     { abladen_module.abladenBlau();
                         blau_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 3 and !gelb_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 3)) 
                     { abladen_module.abladenGelb();
                         gelb_abgegeben = true;
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::READY;
+                            robot_state = RobotState::LOSFAHRENN;
                     }
                     else if (farbe == 4 and !gruen_abgegeben and (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 4)) 
                     { abladen_module.abladenGruen();
                         gruen_abgegeben = true; 
                         if (!gripper_cfg::lager)
                             {schon_ein_paeckchen_aufgenommen = 0; }
-                            robot_state = RobotState::READY;  
+                            robot_state = RobotState::LOSFAHRENN;  
                     }
                     else if (rot_abgegeben and blau_abgegeben and gelb_abgegeben and gruen_abgegeben) 
                     { 
@@ -315,10 +329,20 @@ int main()
                     else 
                     {
                         // falsches Haus oder Farbe bereits abgegeben → zurück zu READY, Button nötig
-                        robot_state = RobotState::READY;
+                        robot_state = RobotState::LOSFAHRENN;
                     }
                 break;
             }
+
+            case RobotState::LOSFAHRENN:
+
+                printReadyState();
+                    motor_module.setVelocity(-0.5f);
+                    servo_module.setSteeringAngle(0.5f);
+                    thread_sleep_for(500);
+                    motor_module.stop();
+                    robot_state = RobotState::READY;
+                break;
 
 
             case RobotState::SLEEP:

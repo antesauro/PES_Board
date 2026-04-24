@@ -14,6 +14,7 @@ void printReadyState();
 void printRetrieveState();
 void printPickupState();
 void printDeliverState();
+void printLosfahrennState();
 void printSleepState();
 void printEmergencyState();
 

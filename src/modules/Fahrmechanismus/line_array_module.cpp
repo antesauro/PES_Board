@@ -65,10 +65,12 @@ uint8_t LineArrayModule::update(bool do_print)
     m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
-    if (raw == SENSOR_MASK_B2_TO_B5)
-        event = EVENT_DELIVERY_HOUSE;
-    else if (raw == SENSOR_MASK_ALL_BITS)
+    const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
+    if (activeBits == SENSOR_MASK_ALL_BITS || numActiveLeds >= 6) {
         event = EVENT_PICKUP_HOUSE;
+    } else if ((activeBits & SENSOR_MASK_B2_TO_B5) == SENSOR_MASK_B2_TO_B5 && numActiveLeds >= 4) {
+        event = EVENT_DELIVERY_HOUSE;
+    }
 
     // --- NON-LINEAR P CONTROLLER MATH ---
     float err = m_filteredCorrection;
@@ -95,6 +97,10 @@ uint8_t LineArrayModule::update(bool do_print)
     }
 
     m_driveVoltage = -DRIVE_VOLTAGE_FULL * drive_scale;
+
+    if (event != EVENT_NONE) {
+        m_driveVoltage = 0.0f;
+    }
 
     // --- RESET LOGIC ---
     if (!lineDetected) {

@@ -39,6 +39,13 @@ void printDeliverState()
 #endif
 }
 
+void printLosfahrennState()
+{
+#if DEBUG_PRINT_ENABLE
+    printf("LOSFAHRENN\n");
+#endif
+}
+
 void printSleepState()
 {
 #if DEBUG_PRINT_ENABLE
