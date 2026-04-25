@@ -11,6 +11,22 @@ static constexpr float CALIB_WHITE_G = 2336.46f;
 static constexpr float CALIB_WHITE_B = 8210.50f;
 static constexpr float CALIB_WHITE_C = 3553.85f;
 
+static int sensorColorToPackageColor(int sensor_color)
+{
+    switch (sensor_color) {
+        case 3:
+            return 1; // RED
+        case 7:
+            return 2; // BLUE
+        case 4:
+            return 3; // YELLOW
+        case 5:
+            return 4; // GREEN
+        default:
+            return 0; // UNKNOWN / not one of the 4 target colors
+    }
+}
+
 ColorSensorModule::ColorSensorModule() :
     m_sensor(PB_3)
 {
@@ -46,18 +62,24 @@ void ColorSensorModule::printColor()
 
 int ColorSensorModule::detectedPackageColor()
 {
-    const int color_num = m_sensor.getColor();
+    const uint32_t now_ms = Kernel::Clock::now().time_since_epoch().count() / 1000;
+    const int package_color = sensorColorToPackageColor(m_sensor.getColor());
 
-    switch (color_num) {
-        case 3:
-            return 1; // RED
-        case 7:
-            return 2; // BLUE
-        case 4:
-            return 3; // YELLOW
-        case 5:
-            return 4; // GREEN
-        default:
-            return 0; // UNKNOWN / not one of the 4 target colors
+    if (package_color != 0) {
+        m_last_package_color = package_color;
+        m_last_package_color_ms = now_ms;
+        return package_color;
     }
+
+    if (m_last_package_color != 0 && (now_ms - m_last_package_color_ms) <= PACKAGE_COLOR_HOLD_MS) {
+        return m_last_package_color;
+    }
+
+    return 0;
+}
+
+void ColorSensorModule::resetPackageColorHold()
+{
+    m_last_package_color = 0;
+    m_last_package_color_ms = 0;
 }

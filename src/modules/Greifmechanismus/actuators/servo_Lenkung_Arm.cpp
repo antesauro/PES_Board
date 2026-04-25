@@ -42,7 +42,7 @@ void ServoModule::enable()
 
 void ServoModule::setSteeringAngle(float angle)
 {
-    m_servo.setPulseWidth(invertNormalized(angle));
+    m_servo.setPulseWidth(constrainNormalized(angle));
 }
 
 void ServoModule::center()

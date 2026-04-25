@@ -312,13 +312,16 @@ int ColorSensor::getColor()
     const float C0_WHITE_MIN = 650.0f;    // above + neutral => WHITE
 
     const float SATP_GRAY_MAX  = 0.08f;   // below => neutral
-    const float SATP_COLOR_MIN = 0.12f;   // below => treat as unknown/neutral
+    const float SATP_COLOR_MIN = 0.10f;   // allow slightly less saturated colors
 
     // Hue boundaries (simplified for R, G, B, Y only)
     const float H_RED_MAX     = 30.0f;
     const float H_YELLOW_MAX  = 90.0f;
     const float H_GREEN_MAX   = 150.0f;
-    const float H_BLUE_MAX    = 270.0f;
+    const float H_BLUE_MAX    = 330.0f;   // widened: blue often shifts toward violet after calibration
+
+    // Blue fallback if hue is unstable but blue channel is clearly dominant.
+    const float BLUE_DOM_MIN = 1.10f;
 
     // Yellow override thresholds tuned from live logs:
     // your yellow samples were around r/b~1.59, g/b~1.18, g/r~0.74.
@@ -387,6 +390,19 @@ int ColorSensor::getColor()
                 else if (h <= H_GREEN_MAX)          candidate = 5; // GREEN
                 else if (h <= H_BLUE_MAX)           candidate = 7; // BLUE
                 else                                candidate = 0; // UNKNOWN
+
+                // Guard against red false positives on yellow surfaces.
+                // If green is still relatively high compared to red, treat it as yellow.
+                if (candidate == 3 && rg_ratio > 0.62f && gb_y > 1.02f) {
+                    candidate = 4;
+                }
+
+                if (candidate == 0) {
+                    const bool blue_dominant = (b0 > r0 * BLUE_DOM_MIN) && (b0 > g0 * BLUE_DOM_MIN);
+                    if (blue_dominant) {
+                        candidate = 7; // BLUE
+                    }
+                }
             }
         }
 
