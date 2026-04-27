@@ -13,6 +13,8 @@ constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.344f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.25f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.25f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.20f;
+// Sicherheitswinkel fuer vertikale Ausrichtung des Arms
+constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
 
 // Lagerplatz-Positionen am Drehkranz.
 constexpr float LAGER_POS_1_D = 0.0;
