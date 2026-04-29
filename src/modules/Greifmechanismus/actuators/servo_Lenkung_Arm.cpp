@@ -9,7 +9,7 @@ namespace {
 // Physical pulse width limits (seconds) determined by servo calibration.
 static constexpr float SERVO_D1_ANG_MIN = 0.035f;
 static constexpr float SERVO_D1_ANG_MAX = 0.110f;
-static constexpr float SERVO_START_POSITION_D1 = 0.5f;
+static constexpr float SERVO_START_POSITION_D1 = 0.25f;
 static constexpr float SERVO_D1_ANG_MAX_NORMALIZED = 0.5f;
 
 
