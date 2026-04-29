@@ -224,7 +224,7 @@ bool maybeEinlagernFarbe(int farbe)
         g_lager_pos_4 = farbe;
         return true;
     }
-    moveToTunnelPosition();
+
     return false;
 }
 
@@ -253,6 +253,12 @@ bool maybeAuslagernFarbe(int farbe)
     }
 
     return false;
+}
+
+bool isLagerVoll()
+{
+    return g_lager_pos_1 != K_LAGER_LEER && g_lager_pos_2 != K_LAGER_LEER
+           && g_lager_pos_3 != K_LAGER_LEER && g_lager_pos_4 != K_LAGER_LEER;
 }
 } // namespace lagern
 
@@ -300,7 +306,7 @@ void AufnehmenModule::aufnehmenRot()
         moveToTunnelAfterPickup();
         return;
     }
-    if (lagern::maybeEinlagernFarbe(K_FARBE_ROT)) {
+    if (lagern::maybeEinlagernFarbe(K_FARBE_ROT) && lagern::isLagerVoll()) {
         moveToTunnelAfterPickup();
     }
 }
@@ -318,7 +324,7 @@ void AufnehmenModule::aufnehmenBlau()
         moveToTunnelAfterPickup();
         return;
     }
-    if (lagern::maybeEinlagernFarbe(K_FARBE_BLAU)) {
+    if (lagern::maybeEinlagernFarbe(K_FARBE_BLAU) && lagern::isLagerVoll()) {
         moveToTunnelAfterPickup();
     }
 }
@@ -337,7 +343,7 @@ void AufnehmenModule::aufnehmenGelb()
         moveToTunnelAfterPickup();
         return;
     }
-    if (lagern::maybeEinlagernFarbe(K_FARBE_GELB)) {
+    if (lagern::maybeEinlagernFarbe(K_FARBE_GELB) && lagern::isLagerVoll()) {
         moveToTunnelAfterPickup();
     }
 }
@@ -355,7 +361,7 @@ void AufnehmenModule::aufnehmenGruen()
         moveToTunnelAfterPickup();
         return;
     }
-    if (lagern::maybeEinlagernFarbe(K_FARBE_GRUEN)) {
+    if (lagern::maybeEinlagernFarbe(K_FARBE_GRUEN) && lagern::isLagerVoll()) {
         moveToTunnelAfterPickup();
     }
 }
