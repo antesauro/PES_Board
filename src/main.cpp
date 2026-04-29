@@ -96,6 +96,9 @@ int main()
     int deliver_candidate_color = 0;
     int deliver_candidate_count = 0;
 
+    float startup_rotation = 0.0f; // Motor rotation variable for the startup sequence
+    float distance_traveled = 0.0f;
+
     int print_cycle_counter = 0;
     const int print_cycle_divider = print_period_ms / main_task_period_ms;
 
@@ -103,6 +106,7 @@ int main()
     enum RobotState {
         INITIAL,
         READY,
+        START,
         DRIVE,
         PICKUP_WAIT,
         RETRIEVE,
@@ -115,7 +119,7 @@ int main()
     } robot_state = RobotState::INITIAL;
 
     // Emergency toggle for the while loop
-    // the loop will run as long as no emergeny has been met
+    // the loop will run as long as no emergency has been met
     int toggle_emergency = 0;
 
     // --- code that runs every cycle at the start goes here ---
@@ -155,7 +159,8 @@ int main()
                 printReadyState();
 
                 if (do_execute_main_task) {
-                    robot_state = RobotState::DRIVE;
+                    robot_state = RobotState::START;
+                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
                     led1 = 1;
 
                 } else {
@@ -188,11 +193,44 @@ int main()
                         crane_rope_motor.disableMotors();
                         ultrasonic_module.reset();
                         led1 = 0;
+                        distance_traveled = 0.0f;
+                        startup_rotation = 0.0f;
                     }
                 }
 
                 break;
+                case RobotState::START: {
+                const bool do_print = (print_cycle_counter == 0);
+                line_array_module.update(do_print);
 
+                distance_traveled = (motor_module.getRotation() - startup_rotation) *
+                                    -1.0f; // Calculate distance traveled by Drive Motor
+                static constexpr float DRIVE_MAX_RPS = 0.5f;
+                printf("Distance traveled: %f\n", distance_traveled);
+                // First intersection encounter (noch testen mit Abstand!)
+                if (distance_traveled >= 0.1f && distance_traveled < 2.0f) {
+                    motor_module.setVelocity(-0.4f);     // force speed to not block
+                    servo_module.setSteeringAngle(0.75f); // set turn angle for left turn
+                } else if (distance_traveled >= 2.0f && distance_traveled < 3.0f) {
+                    motor_module.setVelocity(-0.5f);     // force speed to not block
+                    servo_module.setSteeringAngle(0.2f); // set turn angle for left turn to smooth out
+                } else {
+                    // normal line follow
+                    float drive_scale = line_array_module.driveVoltage() / 12.0f;
+                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
+                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                }
+
+                if (distance_traveled >= 3.0f) {
+                    robot_state = RobotState::DRIVE;
+                }
+
+                print_cycle_counter++;
+                if (print_cycle_counter >= print_cycle_divider)
+                    print_cycle_counter = 0;
+            }
+                break;
+            
             case RobotState::DRIVE: {
 
                 const bool do_print = (print_cycle_counter == 0);
@@ -461,7 +499,7 @@ int main()
                     servo_module.setSteeringAngle(0.5f);
                     thread_sleep_for(500);
                     motor_module.stop();
-                    robot_state = RobotState::READY;
+                    robot_state = RobotState::DRIVE;
                 break;
 
 
