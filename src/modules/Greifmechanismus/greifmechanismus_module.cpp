@@ -29,45 +29,34 @@ void initActuators()
     (void)armMotor();
 }
 
-constexpr int SERVO_REACTION_TIME_MS = 500;
+constexpr int SERVO_REACTION_TIME_MS = 750;
 
 void waitServoReaction()
 {
     thread_sleep_for(SERVO_REACTION_TIME_MS);
 }
 
-void moveToVerticalSafetyAngle()
-{
-    // Keep arm clear of the house while rotating the drehkranz.
-    lenkungServo().setSteeringAngle(gripper_cfg::VERTIKAL_SICHERHEITS_WINKEL_L);
-    waitServoReaction();
-}
-
 void moveToTunnelPosition()
 {
     drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
+    waitServoReaction();
     lenkungServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_L);
     waitServoReaction();
 }
 
 void moveToHouseWorkPosition(float drehkranz_angle,
                              float lenkung_angle,
-                             bool via_tunnel,
-                             bool move_to_safety_first)
+                             bool via_tunnel)
 {
-    if (move_to_safety_first) {
-        moveToVerticalSafetyAngle();
-    }
+    lenkungServo().setSteeringAngle(lenkung_angle);
+    waitServoReaction();
 
     if (via_tunnel) {
         drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
         waitServoReaction();
     }
 
-    drehkranzServo().setSteeringAngle(-drehkranz_angle);
-    waitServoReaction();
-
-    lenkungServo().setSteeringAngle(-lenkung_angle);
+    drehkranzServo().setSteeringAngle(drehkranz_angle);
     waitServoReaction();
 }
 }
@@ -273,18 +262,11 @@ void moveToTunnelAfterPickup()
 void performPickupAt(float drehkranz_angle,
                      float lenkung_angle,
                      float seil_umdrehungen,
-                     bool via_tunnel,
-                     bool move_to_safety_first,
-                     bool move_to_safety_after_pickup)
+                     bool via_tunnel)
 {
-    moveToHouseWorkPosition(
-        drehkranz_angle, lenkung_angle, via_tunnel, move_to_safety_first);
+    moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     armMotor().setAndWait(seil_umdrehungen);
     armMotor().setAndWait(seil_umdrehungen * -1.0f);
-
-    if (move_to_safety_after_pickup) {
-        moveToVerticalSafetyAngle();
-    }
 }
 }
 
@@ -299,8 +281,6 @@ void AufnehmenModule::aufnehmenRot()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true,
-        false,
         true);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
@@ -317,8 +297,6 @@ void AufnehmenModule::aufnehmenBlau()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false,
-        true,
         false);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
@@ -335,8 +313,6 @@ void AufnehmenModule::aufnehmenGelb()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true,
-        false,
         true);
 
     if (!gripper_cfg::lager) {
@@ -354,8 +330,6 @@ void AufnehmenModule::aufnehmenGruen()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false,
-        true,
         false);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
@@ -378,18 +352,11 @@ void moveToStartPositionAfterDropoff()
 void performDropoffAt(float drehkranz_angle,
                       float lenkung_angle,
                       float seil_umdrehungen,
-                      bool via_tunnel,
-                      bool move_to_safety_first,
-                      bool move_to_safety_after_dropoff)
+                      bool via_tunnel)
 {
-    moveToHouseWorkPosition(
-        drehkranz_angle, lenkung_angle, via_tunnel, move_to_safety_first);
+    moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     armMotor().setAndWait(seil_umdrehungen);
     armMotor().setAndWait(seil_umdrehungen * -1.0f);
-
-    if (move_to_safety_after_dropoff) {
-        moveToVerticalSafetyAngle();
-    }
 }
 }
 
@@ -407,9 +374,7 @@ void AbladenModule::abladenRot()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true,
-        true,
-        false);
+        true);
     moveToStartPositionAfterDropoff();
 }
 
@@ -422,9 +387,7 @@ void AbladenModule::abladenBlau()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false,
-        false,
-        true);
+        false);
     moveToStartPositionAfterDropoff();
 }
 
@@ -437,9 +400,7 @@ void AbladenModule::abladenGelb()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true,
-        true,
-        false);
+        true);
     moveToStartPositionAfterDropoff();
 }
 
@@ -452,9 +413,7 @@ void AbladenModule::abladenGruen()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false,
-        false,
-        true);
+        false);
     moveToStartPositionAfterDropoff();
 }
 }
