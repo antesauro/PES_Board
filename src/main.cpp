@@ -502,10 +502,9 @@ int main()
             case RobotState::LOSFAHRENN:
 
                 printReadyState();
-                motor_module.setVelocity(-0.5f);
                 servo_module.setSteeringAngle(0.5f);
-                thread_sleep_for(250);
-                motor_module.stop();
+                motor_module.setRotation(motor_module.getRotation() + 0.5f); // drive forward for a bit to leave the house area
+                
                 robot_state = RobotState::DRIVE;
                 break;
 
