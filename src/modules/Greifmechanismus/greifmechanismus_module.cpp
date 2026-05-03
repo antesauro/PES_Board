@@ -22,6 +22,12 @@ MotorModuleArm& armMotor()
     return instance;
 }
 
+float& armBasePosition()
+{
+    static float base = 0.0f;
+    return base;
+}
+
 void initActuators()
 {
     (void)drehkranzServo();
@@ -88,6 +94,7 @@ void initializeAll()
     initializeDrehkranzServo();
     initializeLenkungServo();
     initializeArmMotor();
+    armBasePosition() = armMotor().get();
 }
 
 MotorModuleArm& getArmMotor()
@@ -158,7 +165,7 @@ void goToStoragePosition(int pos)
 void pickOrDropStorage(int pos, float seil_umdrehungen)
 {
     goToStoragePosition(pos);
-    const float base = armMotor().get();
+    const float base = armBasePosition();
     armMotor().setAndWait(base - seil_umdrehungen);
     armMotor().setAndWait(base);
 }
@@ -266,7 +273,7 @@ void performPickupAt(float drehkranz_angle,
                      bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
-    const float base = armMotor().get();
+    const float base = armBasePosition();
     armMotor().setAndWait(base - seil_umdrehungen);
     armMotor().setAndWait(base);
 }
@@ -357,7 +364,7 @@ void performDropoffAt(float drehkranz_angle,
                       bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
-    const float base = armMotor().get();
+    const float base = armBasePosition();
     armMotor().setAndWait(base - seil_umdrehungen);
     armMotor().setAndWait(base);
 }
