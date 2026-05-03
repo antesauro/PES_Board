@@ -55,27 +55,26 @@ uint8_t LineArrayModule::update(bool do_print)
     float position = 0.0f;
 
     // Crossing logic
-    if (lineDetected) {
-        // If the outer LEDs are more than 40% active, it's a horizontal line/crossing!
-        if (numActiveLeds >= 5) {
-            // Hold current steering angle to go straight across.
-            position = m_filteredCorrection;
-        } else {
-            //  Steer normally.
-            position = measuredAngle;
-        }
-    }
-
+    /*     if (lineDetected) {
+            // If the outer LEDs are more than 40% active, it's a horizontal line/crossing!
+            if (numActiveLeds >= 5) {
+                // Hold current steering angle to go straight across.
+                position = m_filteredCorrection;
+            } else {
+                //  Steer normally.
+                position = measuredAngle;
+            }
+        } */
+    position = measuredAngle;
     // apply the fast filter
     m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
     const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
     const bool angleIsCentered = fabsf(measuredAngle) <= HOUSE_ANGLE_MAX_RAD;
-    const bool pickupCandidate = angleIsCentered && (activeBits == SENSOR_MASK_ALL_BITS || numActiveLeds >= 6);
+    const bool pickupCandidate = angleIsCentered && (activeBits == SENSOR_MASK_ALL_BITS || numActiveLeds >= 5);
     const uint8_t centerBitsActive = __builtin_popcount(activeBits & SENSOR_MASK_B2_TO_B5);
-    const bool deliveryCandidate = angleIsCentered && numActiveLeds >= 3 && numActiveLeds <= 5 &&
-                                   centerBitsActive >= 3;
+    const bool deliveryCandidate = angleIsCentered && numActiveLeds >= 4 && numActiveLeds < 5 && centerBitsActive >= 2;
 
     if (pickupCandidate)
         m_pickupDetectStreak++;

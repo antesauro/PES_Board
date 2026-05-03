@@ -146,8 +146,7 @@ int main()
                 servo_module.initialize();
                 servo_module.center();
                 // Greifmechanismus-Servos initialisieren und aktivieren
-                gripper_actuators::initializeDrehkranzServo();
-                gripper_actuators::initializeLenkungServo();
+                gripper_actuators::initializeAll();
                 crane_rope_motor.enableMotors();
 
                 color_sensor_module.update();
@@ -161,6 +160,7 @@ int main()
                 if (do_execute_main_task) {
                     robot_state = RobotState::START;
                     startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
+
                     led1 = 1;
 
                 } else {
@@ -205,11 +205,11 @@ int main()
 
                 distance_traveled = (motor_module.getRotation() - startup_rotation) *
                                     -1.0f; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.5f;
+                static constexpr float DRIVE_MAX_RPS = 0.7f;
                 printf("Distance traveled: %f\n", distance_traveled);
                 // First intersection encounter (noch testen mit Abstand!)
                 if (distance_traveled >= 0.1f && distance_traveled < 2.5f) {
-                    motor_module.setVelocity(-0.4f);      // force speed to not block
+                    motor_module.setVelocity(-0.5f);      // force speed to not block
                     servo_module.setSteeringAngle(0.7f); // set turn angle for left turn
                 } else if (distance_traveled >= 2.5f && distance_traveled < 3.5f) {
                     motor_module.setVelocity(-0.5f);     // force speed to not block
@@ -504,7 +504,7 @@ int main()
                 printReadyState();
                 motor_module.setVelocity(-0.5f);
                 servo_module.setSteeringAngle(0.5f);
-                thread_sleep_for(500);
+                thread_sleep_for(250);
                 motor_module.stop();
                 robot_state = RobotState::DRIVE;
                 break;
