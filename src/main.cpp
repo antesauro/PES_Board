@@ -68,7 +68,6 @@ int main()
 
     /* MODULE OBJECTS*/
     LineArrayModule line_array_module;
-    UltrasonicModule ultrasonic_module;
     ColorSensorModule color_sensor_module;
     ServoModule servo_module;
     MotorModule motor_module;
@@ -133,8 +132,6 @@ int main()
         main_task_timer.reset();
 
         user_button_crane_control.update();
-
-        ultrasonic_module.update();
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -190,7 +187,6 @@ int main()
                         gripper_actuators::disableDrehkranzServo();
                         gripper_actuators::disableLenkungServo();
                         crane_rope_motor.disableMotors();
-                        ultrasonic_module.reset();
                         led1 = 0;
                         distance_traveled = 0.0f;
                         startup_rotation = 0.0f;
