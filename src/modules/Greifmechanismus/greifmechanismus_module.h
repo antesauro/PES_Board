@@ -12,7 +12,7 @@ constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.15f;
 // Lenkung bei Aufnahme/Ablage am Haus fuer.
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.25f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.25f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.1f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.2f;
 // Sicherheitswinkel fuer vertikale Ausrichtung des Arms
 constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
 
@@ -34,9 +34,9 @@ extern bool lager;
 //rot_gelb
 constexpr float SEIL_ROTATIONEN_HAUS_ROT_GELB =2.5f;
 //blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GRUEN = 2.5f;
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GRUEN =2.5f;
 //Lagerpos1
-constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
+constexpr float SEIL_ROTATIONEN_LAGER_POS_1 =2.5f;
 //Lagerpos2
 constexpr float SEIL_ROTATIONEN_LAGER_POS_2 = 2.5f;
 //Lagerpos3

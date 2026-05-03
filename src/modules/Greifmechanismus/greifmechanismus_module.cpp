@@ -158,8 +158,9 @@ void goToStoragePosition(int pos)
 void pickOrDropStorage(int pos, float seil_umdrehungen)
 {
     goToStoragePosition(pos);
-    armMotor().setAndWait(seil_umdrehungen);
-    armMotor().setAndWait(seil_umdrehungen * -1.0f);
+    const float base = armMotor().get();
+    armMotor().setAndWait(base - seil_umdrehungen);
+    armMotor().setAndWait(base);
 }
 
 float getStorageRopeTurnsForPos(int pos)
@@ -265,8 +266,9 @@ void performPickupAt(float drehkranz_angle,
                      bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
-    armMotor().setAndWait(seil_umdrehungen);
-    armMotor().setAndWait(seil_umdrehungen * -1.0f);
+    const float base = armMotor().get();
+    armMotor().setAndWait(base - seil_umdrehungen);
+    armMotor().setAndWait(base);
 }
 }
 
@@ -355,8 +357,9 @@ void performDropoffAt(float drehkranz_angle,
                       bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
-    armMotor().setAndWait(seil_umdrehungen);
-    armMotor().setAndWait(seil_umdrehungen * -1.0f);
+    const float base = armMotor().get();
+    armMotor().setAndWait(base - seil_umdrehungen);
+    armMotor().setAndWait(base);
 }
 }
 
