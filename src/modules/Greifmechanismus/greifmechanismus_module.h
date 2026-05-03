@@ -7,7 +7,7 @@ namespace gripper_cfg {
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.7f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.45f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.15f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.18f;
 
 // Lenkung bei Aufnahme/Ablage am Haus fuer.
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.5f;
