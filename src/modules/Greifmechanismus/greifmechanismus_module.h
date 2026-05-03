@@ -32,9 +32,9 @@ extern bool lager;
 
 // Seilhub fuer Haus und Lager.
 //rot_gelb
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GELB =4.0f;
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GELB =3.0f;
 //blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GRUEN =4.6f;
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GRUEN =4.5f;
 //Lagerpos1
 constexpr float SEIL_ROTATIONEN_LAGER_POS_1 =2.5f;
 //Lagerpos2

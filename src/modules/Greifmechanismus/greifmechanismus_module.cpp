@@ -385,7 +385,7 @@ void AbladenModule::abladenRot()
         gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
         gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
         true);
-        
+
     moveToStartPositionAfterDropoff();
 }
 
