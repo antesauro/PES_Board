@@ -211,9 +211,12 @@ int main()
                 if (distance_traveled >= 0.1f && distance_traveled < 2.5f) {
                     motor_module.setVelocity(-0.4f);      // force speed to not block
                     servo_module.setSteeringAngle(0.7f); // set turn angle for left turn
-                } else if (distance_traveled >= 2.5f && distance_traveled < 4.0f) {
+                } else if (distance_traveled >= 2.5f && distance_traveled < 3.5f) {
                     motor_module.setVelocity(-0.5f);     // force speed to not block
                     servo_module.setSteeringAngle(0.2f); // set turn angle for left turn to smooth out
+                }else if( distance_traveled >= 3.5f && distance_traveled <4.0f){
+                  motor_module.setVelocity(-0.5f);     // force speed to not block
+                    servo_module.setSteeringAngle(0.25f); // set turn angle for left turn to smooth out
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
