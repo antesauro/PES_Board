@@ -20,7 +20,7 @@ static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
-static constexpr float HOUSE_ANGLE_MAX_RAD = 0.22f;
+static constexpr float HOUSE_ANGLE_MAX_RAD = 0.25f;
 static constexpr uint8_t HOUSE_CONFIRM_CYCLES = 2;
 
 float clampf(float value, float minValue, float maxValue)
