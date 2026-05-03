@@ -107,13 +107,13 @@ uint8_t LineArrayModule::update(bool do_print)
     float drive_scale = 1.0f - fabsf(m_filteredCorrection) / max_error;
 
     // Minimum power in curves
-    const float MIN_DRIVE_SCALE = 0.3f;
+    const float MIN_DRIVE_SCALE = 0.5f;
 
     if (drive_scale < MIN_DRIVE_SCALE) {
         drive_scale = MIN_DRIVE_SCALE;
     }
-    if (drive_scale > 1.0f) {
-        drive_scale = 1.0f;
+    if (drive_scale > 1.5f) {
+        drive_scale = 1.5f;
     }
 
     m_driveVoltage = -DRIVE_VOLTAGE_FULL * drive_scale;
@@ -122,8 +122,8 @@ uint8_t LineArrayModule::update(bool do_print)
     // --- RESET LOGIC ---
     if (!lineDetected) {
         m_filteredCorrection = 0.0f;
-        m_steeringCommand = STEERING_CENTER;
-        m_driveVoltage = 0.0f;
+        m_steeringCommand = 0.2f;
+        m_driveVoltage = -6.0f;
         m_centerHoldActive = false;
         m_pickupDetectStreak = 0;
         m_deliveryDetectStreak = 0;
