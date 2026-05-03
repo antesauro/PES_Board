@@ -1,28 +1,28 @@
 #include "greifmechanismus_module.h"
 
-#include "actuators/servo_module_Arm.h"
 #include "actuators/motor_module_Arm.h"
+#include "actuators/servo_module_Arm.h"
 
 namespace {
-arm_drehkranz::ServoModule& drehkranzServo()
+arm_drehkranz::ServoModule &drehkranzServo()
 {
     static arm_drehkranz::ServoModule instance;
     return instance;
 }
 
-arm_lenkung::ServoModule& lenkungServo()
+arm_lenkung::ServoModule &lenkungServo()
 {
     static arm_lenkung::ServoModule instance;
     return instance;
 }
 
-MotorModuleArm& armMotor()
+MotorModuleArm &armMotor()
 {
     static MotorModuleArm instance;
     return instance;
 }
 
-float& armBasePosition()
+float &armBasePosition()
 {
     static float base = 0.0f;
     return base;
@@ -37,10 +37,7 @@ void initActuators()
 
 constexpr int SERVO_REACTION_TIME_MS = 750;
 
-void waitServoReaction()
-{
-    thread_sleep_for(SERVO_REACTION_TIME_MS);
-}
+void waitServoReaction() { thread_sleep_for(SERVO_REACTION_TIME_MS); }
 
 void moveToTunnelPosition()
 {
@@ -50,9 +47,7 @@ void moveToTunnelPosition()
     waitServoReaction();
 }
 
-void moveToHouseWorkPosition(float drehkranz_angle,
-                             float lenkung_angle,
-                             bool via_tunnel)
+void moveToHouseWorkPosition(float drehkranz_angle, float lenkung_angle, bool via_tunnel)
 {
     lenkungServo().setSteeringAngle(lenkung_angle);
     waitServoReaction();
@@ -65,10 +60,9 @@ void moveToHouseWorkPosition(float drehkranz_angle,
     drehkranzServo().setSteeringAngle(drehkranz_angle);
     waitServoReaction();
 }
-}
+} // namespace
 
-namespace gripper_actuators
-{
+namespace gripper_actuators {
 void initializeDrehkranzServo()
 {
     initActuators();
@@ -97,7 +91,7 @@ void initializeAll()
     armBasePosition() = armMotor().get();
 }
 
-MotorModuleArm& getArmMotor()
+MotorModuleArm &getArmMotor()
 {
     initActuators();
     return armMotor();
@@ -127,15 +121,13 @@ void disableAll()
     disableLenkungServo();
     disableArmMotor();
 }
-}
+} // namespace gripper_actuators
 
-namespace gripper_cfg
-{
+namespace gripper_cfg {
 bool lager = false;
 } // namespace gripper_cfg
 
-namespace lagern
-{
+namespace lagern {
 // Shared storage state: 0=leer, 1=rot, 2=blau, 3=gelb, 4=gruen.
 int g_lager_pos_1 = 0;
 int g_lager_pos_2 = 0;
@@ -187,16 +179,10 @@ float getStorageRopeTurnsForPos(int pos)
     return 0.0f;
 }
 
-void einlagernposition(int pos)
-{
-    pickOrDropStorage(pos, getStorageRopeTurnsForPos(pos));
-}
+void einlagernposition(int pos) { pickOrDropStorage(pos, getStorageRopeTurnsForPos(pos)); }
 
-void auslagernposition(int pos)
-{
-    pickOrDropStorage(pos, getStorageRopeTurnsForPos(pos));
-}
-}
+void auslagernposition(int pos) { pickOrDropStorage(pos, getStorageRopeTurnsForPos(pos)); }
+} // namespace
 
 bool maybeEinlagernFarbe(int farbe)
 {
@@ -254,43 +240,33 @@ bool maybeAuslagernFarbe(int farbe)
 
 bool isLagerVoll()
 {
-    return g_lager_pos_1 != K_LAGER_LEER && g_lager_pos_2 != K_LAGER_LEER
-           && g_lager_pos_3 != K_LAGER_LEER && g_lager_pos_4 != K_LAGER_LEER;
+    return g_lager_pos_1 != K_LAGER_LEER && g_lager_pos_2 != K_LAGER_LEER && g_lager_pos_3 != K_LAGER_LEER &&
+           g_lager_pos_4 != K_LAGER_LEER;
 }
 } // namespace lagern
 
-namespace aufnehmen
-{
+namespace aufnehmen {
 namespace {
-void moveToTunnelAfterPickup()
-{
-    moveToTunnelPosition();
-}
+void moveToTunnelAfterPickup() { moveToTunnelPosition(); }
 
-void performPickupAt(float drehkranz_angle,
-                     float lenkung_angle,
-                     float seil_umdrehungen,
-                     bool via_tunnel)
+void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen, bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
     armMotor().setAndWait(base - seil_umdrehungen);
+    thread_sleep_for(1000);
     armMotor().setAndWait(base);
 }
-}
+} // namespace
 
-AufnehmenModule::AufnehmenModule()
-{
-    gripper_actuators::initializeAll();
-}
+AufnehmenModule::AufnehmenModule() { gripper_actuators::initializeAll(); }
 
 void AufnehmenModule::aufnehmenRot()
 {
-    performPickupAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true);
+    performPickupAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
+                    gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
+                    gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GRUEN,
+                    true);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -302,11 +278,10 @@ void AufnehmenModule::aufnehmenRot()
 
 void AufnehmenModule::aufnehmenBlau()
 {
-    performPickupAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false);
+    performPickupAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
+                    gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
+                    gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GELB,
+                    false);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -318,11 +293,10 @@ void AufnehmenModule::aufnehmenBlau()
 
 void AufnehmenModule::aufnehmenGelb()
 {
-    performPickupAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true);
+    performPickupAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
+                    gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
+                    gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GRUEN,
+                    true);
 
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
@@ -335,11 +309,10 @@ void AufnehmenModule::aufnehmenGelb()
 
 void AufnehmenModule::aufnehmenGruen()
 {
-    performPickupAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false);
+    performPickupAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
+                    gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
+                    gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GELB,
+                    false);
     if (!gripper_cfg::lager) {
         moveToTunnelAfterPickup();
         return;
@@ -350,41 +323,31 @@ void AufnehmenModule::aufnehmenGruen()
 }
 } // namespace aufnehmen
 
-namespace abladen
-{
+namespace abladen {
 namespace {
-void moveToStartPositionAfterDropoff()
-{
-    moveToTunnelPosition();
-}
+void moveToStartPositionAfterDropoff() { moveToTunnelPosition(); }
 
-void performDropoffAt(float drehkranz_angle,
-                      float lenkung_angle,
-                      float seil_umdrehungen,
-                      bool via_tunnel)
+void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen, bool via_tunnel)
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
     armMotor().setAndWait(base - seil_umdrehungen);
+    thread_sleep_for(1000);
     armMotor().setAndWait(base);
 }
-}
+} // namespace
 
-AbladenModule::AbladenModule()
-{
-    gripper_actuators::initializeAll();
-}
+AbladenModule::AbladenModule() { gripper_actuators::initializeAll(); }
 
 void AbladenModule::abladenRot()
 {
     if (!lagern::maybeAuslagernFarbe(K_FARBE_ROT)) {
         return;
     }
-    performDropoffAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true);
+    performDropoffAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
+                     gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
+                     gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GRUEN,
+                     true);
 
     moveToStartPositionAfterDropoff();
 }
@@ -394,11 +357,10 @@ void AbladenModule::abladenBlau()
     if (!lagern::maybeAuslagernFarbe(K_FARBE_BLAU)) {
         return;
     }
-    performDropoffAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false);
+    performDropoffAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
+                     gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
+                     gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GELB,
+                     false);
     moveToStartPositionAfterDropoff();
 }
 
@@ -407,11 +369,10 @@ void AbladenModule::abladenGelb()
     if (!lagern::maybeAuslagernFarbe(K_FARBE_GELB)) {
         return;
     }
-    performDropoffAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GELB,
-        true);
+    performDropoffAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D,
+                     gripper_cfg::AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L,
+                     gripper_cfg::SEIL_ROTATIONEN_HAUS_ROT_GRUEN,
+                     true);
     moveToStartPositionAfterDropoff();
 }
 
@@ -420,11 +381,10 @@ void AbladenModule::abladenGruen()
     if (!lagern::maybeAuslagernFarbe(K_FARBE_GRUEN)) {
         return;
     }
-    performDropoffAt(
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
-        gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
-        gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GRUEN,
-        false);
+    performDropoffAt(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D,
+                     gripper_cfg::AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L,
+                     gripper_cfg::SEIL_ROTATIONEN_HAUS_BLAU_GELB,
+                     false);
     moveToStartPositionAfterDropoff();
 }
-}
+} // namespace abladen

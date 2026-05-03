@@ -31,33 +31,32 @@ constexpr float LAGER_POS_4_L = 0.0f;
 extern bool lager;
 
 // Seilhub fuer Haus und Lager.
-//rot_gelb
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GELB =3.0f;
-//blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GRUEN =4.5f;
-//Lagerpos1
-constexpr float SEIL_ROTATIONEN_LAGER_POS_1 =2.5f;
-//Lagerpos2
+// ROT_GRUEN
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 3.0f;
+// blau_gruen
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 4.5f;
+// Lagerpos1
+constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
+// Lagerpos2
 constexpr float SEIL_ROTATIONEN_LAGER_POS_2 = 2.5f;
-//Lagerpos3
+// Lagerpos3
 constexpr float SEIL_ROTATIONEN_LAGER_POS_3 = 2.5f;
-//Lagerpos4
+// Lagerpos4
 constexpr float SEIL_ROTATIONEN_LAGER_POS_4 = 2.5f;
 
-}
+} // namespace gripper_cfg
 
-namespace gripper_actuators
-{
+namespace gripper_actuators {
 void initializeDrehkranzServo();
 void initializeLenkungServo();
 void initializeArmMotor();
 void initializeAll();
-MotorModuleArm& getArmMotor();
+MotorModuleArm &getArmMotor();
 void disableDrehkranzServo();
 void disableLenkungServo();
 void disableArmMotor();
 void disableAll();
-}
+} // namespace gripper_actuators
 
 static constexpr int K_LAGER_PLAETZE = 4;
 static constexpr int K_LAGER_LEER = 0;
@@ -66,8 +65,7 @@ static constexpr int K_FARBE_BLAU = 2;
 static constexpr int K_FARBE_GELB = 3;
 static constexpr int K_FARBE_GRUEN = 4;
 
-namespace lagern
-{
+namespace lagern {
 // Shared storage state: 0=leer, 1=rot, 2=blau, 3=gelb, 4=gruen.
 extern int g_lager_pos_1;
 extern int g_lager_pos_2;
@@ -75,8 +73,7 @@ extern int g_lager_pos_3;
 extern int g_lager_pos_4;
 } // namespace lagern
 
-namespace aufnehmen
-{
+namespace aufnehmen {
 class AufnehmenModule
 {
 public:
@@ -89,8 +86,7 @@ public:
 };
 } // namespace aufnehmen
 
-namespace abladen
-{
+namespace abladen {
 class AbladenModule
 {
 public:
