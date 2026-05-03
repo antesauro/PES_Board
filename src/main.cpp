@@ -12,7 +12,6 @@
 #include "modules/Greifmechanismus/actuators/motor_module_Arm.h"
 #include "modules/Greifmechanismus/greifmechanismus_module.h"
 #include "modules/Greifmechanismus/user_button_crane_control.h"
-#include "modules/ultrasonic_module.h"
 
 static constexpr int PICKUP_HOUSE_DISTANCE_MM = 100;
 static constexpr int DELIVERY_HOUSE_DISTANCE_MM = 50;
