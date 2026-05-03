@@ -253,8 +253,8 @@ void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdr
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
+    thread_sleep_for(1200);
     armMotor().setAndWait(base - seil_umdrehungen);
-    thread_sleep_for(1000);
     armMotor().setAndWait(base);
 }
 } // namespace
@@ -331,8 +331,8 @@ void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umd
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
+    thread_sleep_for(1200);
     armMotor().setAndWait(base - seil_umdrehungen);
-    thread_sleep_for(1000);
     armMotor().setAndWait(base);
 }
 } // namespace
