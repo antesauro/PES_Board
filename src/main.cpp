@@ -85,7 +85,7 @@ int main()
     bool gruen_abgegeben = false;
     int schon_ein_paeckchen_aufgenommen = 0;
     int house_event_cooldown_cycles = 0;
-    const int house_event_cooldown_set_cycles = 25; // 25 * 20ms = 500ms
+    const int house_event_cooldown_set_cycles = 10; // 10 * 20ms = 200ms
     int house_stop_confirm_cycles = 0;
     int house_stop_timeout_cycles_remaining = 0;
     int pickup_color_retry_cycles = 0;
