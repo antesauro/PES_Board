@@ -36,8 +36,10 @@ void initActuators()
 }
 
 constexpr int SERVO_REACTION_TIME_MS = 750;
+constexpr int SERVO_REACTION_TIME_RETURN_MS = 350; // schneller Rücklauf nach Seil hochgezogen
 
 void waitServoReaction() { thread_sleep_for(SERVO_REACTION_TIME_MS); }
+void waitServoReactionReturn() { thread_sleep_for(SERVO_REACTION_TIME_RETURN_MS); }
 
 void moveToTunnelPosition()
 {
@@ -45,6 +47,14 @@ void moveToTunnelPosition()
     waitServoReaction();
     lenkungServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_L);
     waitServoReaction();
+}
+
+void moveToTunnelPositionFast()
+{
+    drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
+    waitServoReactionReturn();
+    lenkungServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_L);
+    waitServoReactionReturn();
 }
 
 void moveToHouseWorkPosition(float drehkranz_angle, float lenkung_angle, bool via_tunnel)
@@ -247,7 +257,7 @@ bool isLagerVoll()
 
 namespace aufnehmen {
 namespace {
-void moveToTunnelAfterPickup() { moveToTunnelPosition(); }
+void moveToTunnelAfterPickup() { moveToTunnelPositionFast(); }
 
 void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen, bool via_tunnel)
 {
@@ -325,7 +335,7 @@ void AufnehmenModule::aufnehmenGruen()
 
 namespace abladen {
 namespace {
-void moveToStartPositionAfterDropoff() { moveToTunnelPosition(); }
+void moveToStartPositionAfterDropoff() { moveToTunnelPositionFast(); }
 
 void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umdrehungen, bool via_tunnel)
 {

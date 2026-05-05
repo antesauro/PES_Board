@@ -85,7 +85,7 @@ int main()
     bool gruen_abgegeben = false;
     int schon_ein_paeckchen_aufgenommen = 0;
     int house_event_cooldown_cycles = 0;
-    const int house_event_cooldown_set_cycles = 10; // 10 * 20ms = 200ms
+    const int house_event_cooldown_set_cycles =20; // 15 * 20ms = 350ms
     int house_stop_confirm_cycles = 0;
     int house_stop_timeout_cycles_remaining = 0;
     int pickup_color_retry_cycles = 0;
@@ -363,17 +363,27 @@ int main()
                     color_sensor_module.resetPackageColorHold();
                     robot_state = RobotState::LOSFAHRENN;
                 } else {
-                    pickup_color_retry_cycles++;
-                    if (pickup_color_retry_cycles >= color_retry_timeout_cycles) {
-                        printf("Pickup: keine stabile gueltige Farbe erkannt (letzte=%s, kandidat=%s, count=%d). Fahre "
-                               "weiter.\n",
-                               packageColorToString(farbe),
-                               packageColorToString(pickup_candidate_color),
-                               pickup_candidate_count);
+                    // Wenn eine stabile Farbe erkannt wurde, aber kein Pickup nötig → sofort weiterfahren
+                    if (pickup_color_is_stable) {
+                        printf("Pickup: Farbe %s erkannt, kein Pickup noetig. Fahre sofort weiter.\n",
+                               packageColorToString(pickup_candidate_color));
                         pickup_candidate_color = 0;
                         pickup_candidate_count = 0;
                         color_sensor_module.resetPackageColorHold();
                         robot_state = RobotState::LOSFAHRENN;
+                    } else {
+                        pickup_color_retry_cycles++;
+                        if (pickup_color_retry_cycles >= color_retry_timeout_cycles) {
+                            printf("Pickup: keine stabile gueltige Farbe erkannt (letzte=%s, kandidat=%s, count=%d). Fahre "
+                                   "weiter.\n",
+                                   packageColorToString(farbe),
+                                   packageColorToString(pickup_candidate_color),
+                                   pickup_candidate_count);
+                            pickup_candidate_color = 0;
+                            pickup_candidate_count = 0;
+                            color_sensor_module.resetPackageColorHold();
+                            robot_state = RobotState::LOSFAHRENN;
+                        }
                     }
                 }
                 break;
@@ -478,17 +488,27 @@ int main()
                         robot_state = RobotState::LOSFAHRENN;
                     }
                 } else {
-                    deliver_color_retry_cycles++;
-                    if (deliver_color_retry_cycles >= color_retry_timeout_cycles) {
-                        printf("Deliver: keine stabile passende Farbe erkannt (letzte=%s, kandidat=%s, count=%d). "
-                               "Fahre weiter.\n",
-                               packageColorToString(farbe),
-                               packageColorToString(deliver_candidate_color),
-                               deliver_candidate_count);
+                    // Wenn eine stabile Farbe erkannt wurde, aber kein Deliver nötig → sofort weiterfahren
+                    if (deliver_color_is_stable) {
+                        printf("Deliver: Farbe %s erkannt, kein Deliver noetig. Fahre sofort weiter.\n",
+                               packageColorToString(deliver_candidate_color));
                         deliver_candidate_color = 0;
                         deliver_candidate_count = 0;
                         color_sensor_module.resetPackageColorHold();
                         robot_state = RobotState::LOSFAHRENN;
+                    } else {
+                        deliver_color_retry_cycles++;
+                        if (deliver_color_retry_cycles >= color_retry_timeout_cycles) {
+                            printf("Deliver: keine stabile passende Farbe erkannt (letzte=%s, kandidat=%s, count=%d). "
+                                   "Fahre weiter.\n",
+                                   packageColorToString(farbe),
+                                   packageColorToString(deliver_candidate_color),
+                                   deliver_candidate_count);
+                            deliver_candidate_color = 0;
+                            deliver_candidate_count = 0;
+                            color_sensor_module.resetPackageColorHold();
+                            robot_state = RobotState::LOSFAHRENN;
+                        }
                     }
                 }
                 break;
