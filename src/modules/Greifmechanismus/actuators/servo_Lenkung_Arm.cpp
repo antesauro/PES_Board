@@ -2,7 +2,7 @@
 
 #include "PESBoardPinMap.h"
 // The maximum speed for the servo is determined by testing and calibration.
-static constexpr float SERVO_MAX_SPEED = 0.18f;
+static constexpr float SERVO_MAX_SPEED = 0.8f;
 
 namespace arm_lenkung {
 namespace {

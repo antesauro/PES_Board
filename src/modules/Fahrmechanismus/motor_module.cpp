@@ -19,6 +19,7 @@ void MotorModule::initialize()
 
 void MotorModule::setVelocity(float velocity_rps)
 {
+    m_motor.enableMotionPlanner();
     m_motor.setVelocity(velocity_rps);
 }
 
@@ -39,6 +40,7 @@ float MotorModule::getRotation() const
 
 void MotorModule::stop()
 {
+    m_motor.disableMotionPlanner();
     m_motor.setVelocity(0.0f);
 }
 

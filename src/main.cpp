@@ -85,7 +85,7 @@ int main()
     bool gruen_abgegeben = false;
     int schon_ein_paeckchen_aufgenommen = 0;
     int house_event_cooldown_cycles = 0;
-    const int house_event_cooldown_set_cycles =20; // 15 * 20ms = 350ms
+    const int house_event_cooldown_set_cycles = 20; // 15 * 20ms = 350ms
     int house_stop_confirm_cycles = 0;
     int house_stop_timeout_cycles_remaining = 0;
     int pickup_color_retry_cycles = 0;
@@ -200,18 +200,21 @@ int main()
 
                 distance_traveled = (motor_module.getRotation() - startup_rotation) *
                                     -1.0f; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.7f;
+                static constexpr float DRIVE_MAX_RPS = 0.5f;
                 printf("Distance traveled: %f\n", distance_traveled);
                 // First intersection encounter (noch testen mit Abstand!)
                 if (distance_traveled >= 0.1f && distance_traveled < 2.5f) {
-                    motor_module.setVelocity(-0.5f);      // force speed to not block
+                    motor_module.setVelocity(-0.5f);     // force speed to not block
                     servo_module.setSteeringAngle(0.7f); // set turn angle for left turn
                 } else if (distance_traveled >= 2.5f && distance_traveled < 3.5f) {
                     motor_module.setVelocity(-0.5f);     // force speed to not block
                     servo_module.setSteeringAngle(0.2f); // set turn angle for left turn to smooth out
-                }else if( distance_traveled >= 3.5f && distance_traveled <4.0f){
-                  motor_module.setVelocity(-0.5f);     // force speed to not block
+                } else if (distance_traveled >= 3.5f && distance_traveled < 3.9f) {
+                    motor_module.setVelocity(-0.5f);      // force speed to not block
                     servo_module.setSteeringAngle(0.25f); // set turn angle for left turn to smooth out
+                } else if (distance_traveled >= 3.9f && distance_traveled < 4.2f) {
+                    motor_module.setVelocity(-0.3f);    // force speed to not block
+                    servo_module.setSteeringAngle(0.5); // set turn angle for left turn to smooth out
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
@@ -219,7 +222,7 @@ int main()
                     servo_module.setSteeringAngle(line_array_module.steeringCommand());
                 }
 
-                if (distance_traveled >= 4.0f) {
+                if (distance_traveled >= 4.2f) {
                     robot_state = RobotState::DRIVE;
                 }
 
@@ -247,7 +250,8 @@ int main()
 
                 // Event-Prüfung VOR dem Motor-Setzen:
                 // wenn ein Haus erkannt wird, zuerst stoppen – nicht erst fahren und dann stoppen.
-                if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE) {
+                if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE &&
+                    schon_ein_paeckchen_aufgenommen == 0) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
@@ -259,7 +263,7 @@ int main()
                     printf("Abholhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE &&
-                           fabsf(line_array_module.steeringCommand() - 0.5f) < 0.15f) {
+                           fabsf(line_array_module.steeringCommand() - 0.5f) < 0.15f && schon_ein_paeckchen_aufgenommen) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
@@ -271,7 +275,7 @@ int main()
                     printf("Lieferhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else {
-                    static constexpr float DRIVE_MAX_RPS = 1.0f;
+                    static constexpr float DRIVE_MAX_RPS = 1.2f;
                     const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                     motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                     servo_module.setSteeringAngle(line_array_module.steeringCommand());
@@ -374,7 +378,8 @@ int main()
                     } else {
                         pickup_color_retry_cycles++;
                         if (pickup_color_retry_cycles >= color_retry_timeout_cycles) {
-                            printf("Pickup: keine stabile gueltige Farbe erkannt (letzte=%s, kandidat=%s, count=%d). Fahre "
+                            printf("Pickup: keine stabile gueltige Farbe erkannt (letzte=%s, kandidat=%s, count=%d). "
+                                   "Fahre "
                                    "weiter.\n",
                                    packageColorToString(farbe),
                                    packageColorToString(pickup_candidate_color),
@@ -518,8 +523,9 @@ int main()
 
                 printReadyState();
                 servo_module.setSteeringAngle(0.5f);
-                motor_module.setRotation(motor_module.getRotation() + 0.5f); // drive forward for a bit to leave the house area
-                
+                motor_module.setRotation(motor_module.getRotation() +
+                                         0.5f); // drive forward for a bit to leave the house area
+
                 robot_state = RobotState::DRIVE;
                 break;
 
