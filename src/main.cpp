@@ -200,17 +200,17 @@ int main()
 
                 distance_traveled = (motor_module.getRotation() - startup_rotation) *
                                     -1.0f; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.5f;
+                static constexpr float DRIVE_MAX_RPS = 0.2f;
                 printf("Distance traveled: %f\n", distance_traveled);
                 // First intersection encounter (noch testen mit Abstand!)
-                if (distance_traveled >= 0.1f && distance_traveled < 2.5f) {
-                    motor_module.setVelocity(-0.5f);     // force speed to not block
-                    servo_module.setSteeringAngle(0.75f); // set turn angle for left turn
-                } else if (distance_traveled >= 2.5f && distance_traveled < 4.3f) {
-                    motor_module.setVelocity(-0.5f);     // force speed to not block
+                if (distance_traveled >= 0.1f && distance_traveled < 2.2f) {
+                    motor_module.setVelocity(-1.0f);      // force speed to not block
+                    servo_module.setSteeringAngle(0.8f); // set turn angle for left turn
+                } else if (distance_traveled >= 2.2f && distance_traveled < 4.4f) {
+                    motor_module.setVelocity(-1.0f);      // force speed to not block
                     servo_module.setSteeringAngle(0.15f); // set turn angle for right turn to get back on track
-                } else if (distance_traveled >= 4.3f && distance_traveled < 4.5f) {
-                    motor_module.setVelocity(-0.3f);    // force speed to not block
+                } else if (distance_traveled >= 4.4f && distance_traveled < 4.6f) {
+                    motor_module.setVelocity(-0.5f);    // force speed to not block
                     servo_module.setSteeringAngle(0.5); // set turn angle for left turn to smooth out
                 } else {
                     // normal line follow
@@ -219,7 +219,7 @@ int main()
                     servo_module.setSteeringAngle(0.5f);
                 }
 
-                if (distance_traveled >= 4.5f) {
+                if (distance_traveled >= 4.6f) {
                     robot_state = RobotState::DRIVE;
                 }
 
@@ -260,7 +260,8 @@ int main()
                     printf("Abholhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE &&
-                           fabsf(line_array_module.steeringCommand() - 0.5f) < 0.15f && schon_ein_paeckchen_aufgenommen) {
+                           fabsf(line_array_module.steeringCommand() - 0.5f) < 0.15f &&
+                           schon_ein_paeckchen_aufgenommen) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;

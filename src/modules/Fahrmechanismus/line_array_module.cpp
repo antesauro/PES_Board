@@ -8,12 +8,12 @@
 namespace {
 static constexpr float STEERING_CENTER = 0.5f;
 static constexpr float STEERING_MIN = 0.15f; // min servo position with 1.25 gear ratio
-static constexpr float STEERING_MAX = 0.75f; // max servo position with 1.25 gear ratio
+static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gear ratio
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.1f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -1.2f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.1f;    // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -1.4f; // Aggressive booster for sharp curves
 
 static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
 static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
@@ -65,12 +65,12 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 1. THE CURVE FILTER
     // If the error is large, we are in a curve. Only look for houses if we are driving straight!
-    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.2f;
+    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.3f;
 
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
     const bool deliveryCandidate =
-        angleIsCentered && isDrivingStraight && numActiveLeds >= 3 && numActiveLeds <= 4 && centerBitsActive >= 2;
+        angleIsCentered && isDrivingStraight && numActiveLeds > 3 && numActiveLeds <= 4 && centerBitsActive >= 3;
 
     if (pickupCandidate)
         m_pickupDetectStreak++;
