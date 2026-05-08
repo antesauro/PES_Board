@@ -8,14 +8,14 @@
 namespace {
 static constexpr float STEERING_CENTER = 0.5f;
 static constexpr float STEERING_MIN = 0.15f; // min servo position with 1.25 gear ratio
-static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gear ratio
+static constexpr float STEERING_MAX = 0.75f; // max servo position with 1.25 gear ratio
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.06f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -1.7f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.1f;   // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -1.2f; // Aggressive booster for sharp curves
 
-static constexpr float CORRECTION_ALPHA = 0.5f;  // Keep the EMA filter for smooth servo action
+static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
 static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
@@ -62,14 +62,15 @@ uint8_t LineArrayModule::update(bool do_print)
     const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
     const uint8_t centerBitsActive = __builtin_popcount(activeBits & SENSOR_MASK_B2_TO_B5);
     const bool angleIsCentered = fabsf(measuredAngle) <= HOUSE_ANGLE_MAX_RAD;
-    
+
     // 1. THE CURVE FILTER
     // If the error is large, we are in a curve. Only look for houses if we are driving straight!
     const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.2f;
 
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
-    const bool deliveryCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 3 && numActiveLeds <= 4 && centerBitsActive >= 2;
+    const bool deliveryCandidate =
+        angleIsCentered && isDrivingStraight && numActiveLeds >= 3 && numActiveLeds <= 4 && centerBitsActive >= 2;
 
     if (pickupCandidate)
         m_pickupDetectStreak++;
@@ -88,7 +89,7 @@ uint8_t LineArrayModule::update(bool do_print)
     } else if (m_deliveryDetectStreak >= 2) {
         event = EVENT_DELIVERY_HOUSE;
     }
-    
+
     // --- NON-LINEAR P CONTROLLER MATH ---
     float err = m_filteredCorrection;
     float steeringOutput = (KP_LINEAR * err) + (KP_NONLINEAR * err * fabsf(err));
@@ -117,11 +118,11 @@ uint8_t LineArrayModule::update(bool do_print)
 
         // Subtract a braking penalty based on how fast the curve is appearing.
         // The multiplier (2.5f) is your "Brake Strength" tuning parameter.
-        drive_scale -= (error_growth * 4.5f);
+        drive_scale -= (error_growth * 4.0f);
     }
 
     // Minimum power in curves
-    const float MIN_DRIVE_SCALE = 0.3f;
+    const float MIN_DRIVE_SCALE = 0.2f;
 
     if (drive_scale < MIN_DRIVE_SCALE) {
         drive_scale = MIN_DRIVE_SCALE;

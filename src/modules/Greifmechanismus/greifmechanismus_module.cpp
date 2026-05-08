@@ -41,13 +41,13 @@ constexpr int SERVO_REACTION_TIME_RETURN_MS = 350; // schneller Rücklauf nach S
 void waitServoReaction() { thread_sleep_for(SERVO_REACTION_TIME_MS); }
 void waitServoReactionReturn() { thread_sleep_for(SERVO_REACTION_TIME_RETURN_MS); }
 
-void moveToTunnelPosition()
+/* void moveToTunnelPosition()
 {
     drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
     waitServoReaction();
     lenkungServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_L);
     waitServoReaction();
-}
+} */
 
 void moveToTunnelPositionFast()
 {

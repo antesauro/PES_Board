@@ -205,24 +205,21 @@ int main()
                 // First intersection encounter (noch testen mit Abstand!)
                 if (distance_traveled >= 0.1f && distance_traveled < 2.5f) {
                     motor_module.setVelocity(-0.5f);     // force speed to not block
-                    servo_module.setSteeringAngle(0.7f); // set turn angle for left turn
-                } else if (distance_traveled >= 2.5f && distance_traveled < 3.5f) {
+                    servo_module.setSteeringAngle(0.75f); // set turn angle for left turn
+                } else if (distance_traveled >= 2.5f && distance_traveled < 4.3f) {
                     motor_module.setVelocity(-0.5f);     // force speed to not block
-                    servo_module.setSteeringAngle(0.2f); // set turn angle for left turn to smooth out
-                } else if (distance_traveled >= 3.5f && distance_traveled < 3.9f) {
-                    motor_module.setVelocity(-0.5f);      // force speed to not block
-                    servo_module.setSteeringAngle(0.25f); // set turn angle for left turn to smooth out
-                } else if (distance_traveled >= 3.9f && distance_traveled < 4.2f) {
+                    servo_module.setSteeringAngle(0.15f); // set turn angle for right turn to get back on track
+                } else if (distance_traveled >= 4.3f && distance_traveled < 4.5f) {
                     motor_module.setVelocity(-0.3f);    // force speed to not block
                     servo_module.setSteeringAngle(0.5); // set turn angle for left turn to smooth out
                 } else {
                     // normal line follow
                     float drive_scale = line_array_module.driveVoltage() / 12.0f;
                     motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                    servo_module.setSteeringAngle(line_array_module.steeringCommand());
+                    servo_module.setSteeringAngle(0.5f);
                 }
 
-                if (distance_traveled >= 4.2f) {
+                if (distance_traveled >= 4.5f) {
                     robot_state = RobotState::DRIVE;
                 }
 

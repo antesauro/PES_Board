@@ -5,14 +5,16 @@ class MotorModuleArm;
 namespace gripper_cfg {
 
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
+// 0.0f gegen hinten, 1.0g gegen vorne
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.7f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.45f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.18f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.20f;
 
 // Lenkung bei Aufnahme/Ablage am Haus fuer.
+// 0.0f hoch und 1.0f unten
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.5f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.4f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.2f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.18f;
 // Sicherheitswinkel fuer vertikale Ausrichtung des Arms
 constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
 
@@ -32,9 +34,9 @@ extern bool lager;
 
 // Seilhub fuer Haus und Lager.
 // ROT_GRUEN
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 2.5f;
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 3.7f;
 // blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 4.3f;
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 5.5f;
 // Lagerpos1
 constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
 // Lagerpos2
