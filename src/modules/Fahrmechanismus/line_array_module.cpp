@@ -20,7 +20,7 @@ static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
-static constexpr float HOUSE_ANGLE_MAX_RAD = 0.25f;
+static constexpr float HOUSE_ANGLE_MAX_RAD = 0.3f;
 static constexpr uint8_t HOUSE_CONFIRM_CYCLES = 1;
 
 float clampf(float value, float minValue, float maxValue)
@@ -70,8 +70,7 @@ uint8_t LineArrayModule::update(bool do_print)
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
     const bool deliveryCandidate =
-        angleIsCentered && isDrivingStraight && numActiveLeds > 3 && numActiveLeds <= 4 && centerBitsActive >= 3;
-
+        angleIsCentered && isDrivingStraight && numActiveLeds >= 3 && numActiveLeds <= 4 && centerBitsActive >= 2;
     if (pickupCandidate)
         m_pickupDetectStreak++;
     else

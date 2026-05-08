@@ -204,7 +204,7 @@ int main()
                 printf("Distance traveled: %f\n", distance_traveled);
                 // First intersection encounter (noch testen mit Abstand!)
                 if (distance_traveled >= 0.1f && distance_traveled < 2.2f) {
-                    motor_module.setVelocity(-1.0f);      // force speed to not block
+                    motor_module.setVelocity(-1.0f);     // force speed to not block
                     servo_module.setSteeringAngle(0.8f); // set turn angle for left turn
                 } else if (distance_traveled >= 2.2f && distance_traveled < 4.4f) {
                     motor_module.setVelocity(-1.0f);      // force speed to not block
@@ -260,7 +260,6 @@ int main()
                     printf("Abholhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE &&
-                           fabsf(line_array_module.steeringCommand() - 0.5f) < 0.15f &&
                            schon_ein_paeckchen_aufgenommen) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
