@@ -13,6 +13,7 @@ public:
     void setSteeringAngle(float angle);
     void center();
     void disable();
+    void setSpeed(float speed);
 
 private:
     Servo m_servo;
@@ -30,6 +31,7 @@ public:
     void setSteeringAngle(float angle);
     void center();
     void disable();
+    void setSpeed(float speed);
 
 private:
     Servo m_servo;

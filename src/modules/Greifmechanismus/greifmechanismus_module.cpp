@@ -131,6 +131,24 @@ void disableAll()
     disableLenkungServo();
     disableArmMotor();
 }
+
+void enableFastMode()
+{
+    initActuators();
+    drehkranzServo().setSpeed(SERVO_MAX_SPEED);
+    lenkungServo().setSpeed(SERVO_MAX_SPEED);
+}
+
+void returnSlow(){
+    initActuators();
+    // 1. Switch back to your slow reset speed
+    drehkranzServo().setSpeed(0.15f);
+    lenkungServo().setSpeed(0.15f);
+    
+    // 2. Command them to gently return to the 0.5 and 0.25 start positions
+    drehkranzServo().center();
+    lenkungServo().center();
+}
 } // namespace gripper_actuators
 
 namespace gripper_cfg {

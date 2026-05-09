@@ -1,6 +1,5 @@
-#include "servo_module_Arm.h"
-
 #include "PESBoardPinMap.h"
+#include "servo_module_Arm.h"
 // The maximum speed for the servo is determined by testing and calibration.
 static constexpr float SERVO_MAX_SPEED = 0.8f;
 
@@ -12,23 +11,21 @@ static constexpr float SERVO_D1_ANG_MAX = 0.110f;
 static constexpr float SERVO_START_POSITION_D1 = 0.25f;
 static constexpr float SERVO_D1_ANG_MAX_NORMALIZED = 0.5f;
 
-
 float constrainLenkungNormalized(float value)
 {
-    return (value > SERVO_D1_ANG_MAX_NORMALIZED)
-               ? SERVO_D1_ANG_MAX_NORMALIZED
-               : (value < 0.0f) ? 0.0f : value;
+    return (value > SERVO_D1_ANG_MAX_NORMALIZED) ? SERVO_D1_ANG_MAX_NORMALIZED : (value < 0.0f) ? 0.0f : value;
 }
-}
+} // namespace
 
-ServoModule::ServoModule() : m_servo(PC_8)
+ServoModule::ServoModule()
+    : m_servo(PC_8)
 {
 }
 
 void ServoModule::initialize()
 {
     m_servo.calibratePulseMinMax(SERVO_D1_ANG_MIN, SERVO_D1_ANG_MAX);
-    m_servo.setMaxAcceleration(SERVO_MAX_SPEED);
+    m_servo.setMaxAcceleration(0.15f);
 }
 
 void ServoModule::enable()
@@ -38,23 +35,18 @@ void ServoModule::enable()
     }
 }
 
-void ServoModule::setSteeringAngle(float angle)
-{
-    m_servo.setPulseWidth(constrainLenkungNormalized(angle));
-}
+void ServoModule::setSteeringAngle(float angle) { m_servo.setPulseWidth(constrainLenkungNormalized(angle)); }
 
-void ServoModule::center()
-{
-    m_servo.setPulseWidth(SERVO_START_POSITION_D1);
-}
+void ServoModule::center() { m_servo.setPulseWidth(SERVO_START_POSITION_D1); }
 
+void ServoModule::setSpeed(float speed) { m_servo.setMaxAcceleration(speed); }
 
 void ServoModule::disable()
 {
     if (m_servo.isEnabled())
         m_servo.disable();
 }
-}
+} // namespace arm_lenkung
 
 namespace arm_drehkranz {
 namespace {
@@ -63,25 +55,20 @@ static constexpr float SERVO_D2_ANG_MIN = 0.035f;
 static constexpr float SERVO_D2_ANG_MAX = 0.110f;
 static constexpr float SERVO_START_POSITION_D2 = 0.5f;
 
-float constrainNormalized(float value)
-{
-    return (value > 1.0f) ? 1.0f : (value < 0.0f) ? 0.0f : value;
-}
+float constrainNormalized(float value) { return (value > 1.0f) ? 1.0f : (value < 0.0f) ? 0.0f : value; }
 
-float invertNormalized(float value)
-{
-    return 1.0f - constrainNormalized(value);
-}
-}
+float invertNormalized(float value) { return 1.0f - constrainNormalized(value); }
+} // namespace
 
-ServoModule::ServoModule() : m_servo(PC_6)
+ServoModule::ServoModule()
+    : m_servo(PC_6)
 {
 }
 
 void ServoModule::initialize()
 {
     m_servo.calibratePulseMinMax(SERVO_D2_ANG_MIN, SERVO_D2_ANG_MAX);
-    m_servo.setMaxAcceleration(SERVO_MAX_SPEED);
+    m_servo.setMaxAcceleration(0.15f);
 }
 
 void ServoModule::enable()
@@ -91,20 +78,15 @@ void ServoModule::enable()
     }
 }
 
-void ServoModule::setSteeringAngle(float angle)
-{
-    m_servo.setPulseWidth(invertNormalized(angle));
-}
+void ServoModule::setSteeringAngle(float angle) { m_servo.setPulseWidth(invertNormalized(angle)); }
 
-void ServoModule::center()
-{
-    m_servo.setPulseWidth(SERVO_START_POSITION_D2);
-}
+void ServoModule::center() { m_servo.setPulseWidth(SERVO_START_POSITION_D2); }
 
+void ServoModule::setSpeed(float speed) { m_servo.setMaxAcceleration(speed); }
 
 void ServoModule::disable()
 {
     if (m_servo.isEnabled())
         m_servo.disable();
 }
-}
+} // namespace arm_drehkranz

@@ -12,11 +12,11 @@ static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gea
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.1f;    // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -1.4f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.15f;    // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -2.7f; // Aggressive booster for sharp curves
 
-static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
-static constexpr float STEERING_STEP_MAX = 0.2f; // Keep servo fast
+// static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
+static constexpr float STEERING_STEP_MAX = 0.4f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
@@ -52,11 +52,14 @@ uint8_t LineArrayModule::update(bool do_print)
     const bool lineDetected = m_sensorBar.isAnyLedActive();
     const uint8_t numActiveLeds = m_sensorBar.getNrOfLedsActive(); // gets number of active leds from sensor bar
     const float measuredAngle = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
-    float position = 0.0f;
 
-    position = measuredAngle;
-    // apply the fast filter
-    m_filteredCorrection += CORRECTION_ALPHA * (position - m_filteredCorrection);
+    // Inside update(bool useLinearOnly)
+    float raw_err = measuredAngle;
+    // If error is high, react fast. If error is low, filter heavily.
+    float adaptive_alpha = 0.15f + (fabsf(raw_err) * 3.0f);
+    adaptive_alpha = clampf(adaptive_alpha, 0.15f, 0.8f);
+
+    m_filteredCorrection += adaptive_alpha * (raw_err - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
     const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
@@ -65,7 +68,7 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 1. THE CURVE FILTER
     // If the error is large, we are in a curve. Only look for houses if we are driving straight!
-    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.3f;
+    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.2f;
 
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
@@ -82,8 +85,8 @@ uint8_t LineArrayModule::update(bool do_print)
         m_deliveryDetectStreak = 0;
 
     // 3. ASYMMETRIC EVENT TRIGGERS
-    // Pickup requires 1 frame. Delivery requires 2 frames to ignore the leading edge of a pickup tape!
-    if (m_pickupDetectStreak >= 1) {
+    // Pickup requires 2 frame. Delivery requires 2 frames to ignore the leading edge of a pickup tape!
+    if (m_pickupDetectStreak >= 2) {
         event = EVENT_PICKUP_HOUSE;
     } else if (m_deliveryDetectStreak >= 2) {
         event = EVENT_DELIVERY_HOUSE;
@@ -91,7 +94,11 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // --- NON-LINEAR P CONTROLLER MATH ---
     float err = m_filteredCorrection;
-    float steeringOutput = (KP_LINEAR * err) + (KP_NONLINEAR * err * fabsf(err));
+    float steeringOutput =
+        (KP_LINEAR * err) +
+        (KP_NONLINEAR *
+         (err * err * err)); // Kubischen nicht Linearen anteil um das Vorzeichen zum behalten
+                             // und in Kurven eine deutliche Grössere Korrektur zu machen als auf gerade Linien
 
     // Apply the output to the target (using subtraction to steer the correct way)
     const float steeringTarget = STEERING_CENTER - steeringOutput;
@@ -108,7 +115,7 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 2. Predictive Braking (Using EMA Delta)
     // If raw position is further from center than the filtered error, the error is actively growing.
-    float abs_position = fabsf(position);
+    float abs_position = fabsf(raw_err);
     float abs_filtered = fabsf(err);
 
     if (abs_position > abs_filtered) {
@@ -116,12 +123,11 @@ uint8_t LineArrayModule::update(bool do_print)
         float error_growth = abs_position - abs_filtered;
 
         // Subtract a braking penalty based on how fast the curve is appearing.
-        // The multiplier (2.5f) is your "Brake Strength" tuning parameter.
-        drive_scale -= (error_growth * 4.0f);
+        drive_scale -= (error_growth * 2.0f);
     }
 
     // Minimum power in curves
-    const float MIN_DRIVE_SCALE = 0.2f;
+    const float MIN_DRIVE_SCALE = 0.6f;
 
     if (drive_scale < MIN_DRIVE_SCALE) {
         drive_scale = MIN_DRIVE_SCALE;
@@ -143,7 +149,7 @@ uint8_t LineArrayModule::update(bool do_print)
     }
 
     if (do_print)
-        printLineArrayDebug(raw, position, m_filteredCorrection, m_steeringCommand, m_driveVoltage, event);
+        printLineArrayDebug(raw, raw_err, m_filteredCorrection, m_steeringCommand, m_driveVoltage, event);
 
     return event;
 }

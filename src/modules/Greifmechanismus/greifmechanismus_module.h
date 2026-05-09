@@ -48,6 +48,8 @@ constexpr float SEIL_ROTATIONEN_LAGER_POS_4 = 2.5f;
 
 } // namespace gripper_cfg
 
+static constexpr float SERVO_MAX_SPEED = 0.8f;
+
 namespace gripper_actuators {
 void initializeDrehkranzServo();
 void initializeLenkungServo();
@@ -58,6 +60,8 @@ void disableDrehkranzServo();
 void disableLenkungServo();
 void disableArmMotor();
 void disableAll();
+void enableFastMode();
+void returnSlow();
 } // namespace gripper_actuators
 
 static constexpr int K_LAGER_PLAETZE = 4;

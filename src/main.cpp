@@ -156,6 +156,7 @@ int main()
                 if (do_execute_main_task) {
                     robot_state = RobotState::START;
                     startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
+                    gripper_actuators::enableFastMode();
 
                     led1 = 1;
 
@@ -184,8 +185,7 @@ int main()
                         print_cycle_counter = 0;
                         servo_module.disable();
                         motor_module.disable();
-                        gripper_actuators::disableDrehkranzServo();
-                        gripper_actuators::disableLenkungServo();
+                        gripper_actuators::returnSlow();
                         crane_rope_motor.disableMotors();
                         led1 = 0;
                         distance_traveled = 0.0f;
@@ -198,29 +198,34 @@ int main()
                 const bool do_print = (print_cycle_counter == 0);
                 line_array_module.update(do_print);
 
-                distance_traveled = (motor_module.getRotation() - startup_rotation) *
-                                    -1.0f; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.2f;
-                printf("Distance traveled: %f\n", distance_traveled);
-                // First intersection encounter (noch testen mit Abstand!)
-                if (distance_traveled >= 0.1f && distance_traveled < 2.2f) {
-                    motor_module.setVelocity(-1.0f);     // force speed to not block
-                    servo_module.setSteeringAngle(0.8f); // set turn angle for left turn
-                } else if (distance_traveled >= 2.2f && distance_traveled < 4.4f) {
-                    motor_module.setVelocity(-1.0f);      // force speed to not block
-                    servo_module.setSteeringAngle(0.15f); // set turn angle for right turn to get back on track
-                } else if (distance_traveled >= 4.4f && distance_traveled < 4.6f) {
-                    motor_module.setVelocity(-0.5f);    // force speed to not block
-                    servo_module.setSteeringAngle(0.5); // set turn angle for left turn to smooth out
-                } else {
-                    // normal line follow
-                    float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                    servo_module.setSteeringAngle(0.5f);
-                }
+                // Add a static step counter that remembers where we are
+                static int start_sequence_step = 0;
 
-                if (distance_traveled >= 4.6f) {
+                distance_traveled = (motor_module.getRotation() - startup_rotation) * -1.0f;
+
+                if (start_sequence_step == 0) {
+                    motor_module.setVelocity(-0.2f);
+                    servo_module.setSteeringAngle(0.5f);
+                    if (distance_traveled >= 0.1f)
+                        start_sequence_step = 1; // Move to next step
+                } else if (start_sequence_step == 1) {
+                    motor_module.setVelocity(-1.0f);
+                    servo_module.setSteeringAngle(0.8f);
+                    if (distance_traveled >= 2.2f)
+                        start_sequence_step = 2;
+                } else if (start_sequence_step == 2) {
+                    motor_module.setVelocity(-1.0f);
+                    servo_module.setSteeringAngle(0.15f);
+                    if (distance_traveled >= 4.4f)
+                        start_sequence_step = 3;
+                } else if (start_sequence_step == 3) {
+                    motor_module.setVelocity(-0.5f);
+                    servo_module.setSteeringAngle(0.5f);
+                    if (distance_traveled >= 4.6f)
+                        start_sequence_step = 4;
+                } else if (start_sequence_step == 4) {
                     robot_state = RobotState::DRIVE;
+                    start_sequence_step = 0; // Reset for the next time we run the course
                 }
 
                 print_cycle_counter++;
@@ -272,7 +277,7 @@ int main()
                     printf("Lieferhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else {
-                    static constexpr float DRIVE_MAX_RPS = 1.2f;
+                    static constexpr float DRIVE_MAX_RPS = 1.5f;
                     const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                     motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                     servo_module.setSteeringAngle(line_array_module.steeringCommand());
