@@ -34,9 +34,9 @@ extern bool lager;
 
 // Seilhub fuer Haus und Lager.
 // ROT_GRUEN
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 3.2f;
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 3.7f;
 // blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 5.3f;
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 6.0f;
 // Lagerpos1
 constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
 // Lagerpos2
@@ -48,7 +48,7 @@ constexpr float SEIL_ROTATIONEN_LAGER_POS_4 = 2.5f;
 
 } // namespace gripper_cfg
 
-static constexpr float SERVO_MAX_SPEED = 0.8f;
+static constexpr float SERVO_MAX_SPEED = 1.5f;
 
 namespace gripper_actuators {
 void initializeDrehkranzServo();

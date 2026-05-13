@@ -12,11 +12,11 @@ static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gea
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.15f;    // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -2.7f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.073f;   // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -3.0f; // Aggressive booster for sharp curves
 
 // static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
-static constexpr float STEERING_STEP_MAX = 0.4f; // Keep servo fast
+static constexpr float STEERING_STEP_MAX = 1.0f; // Keep servo fast
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
@@ -56,8 +56,8 @@ uint8_t LineArrayModule::update(bool do_print)
     // Inside update(bool useLinearOnly)
     float raw_err = measuredAngle;
     // If error is high, react fast. If error is low, filter heavily.
-    float adaptive_alpha = 0.15f + (fabsf(raw_err) * 3.0f);
-    adaptive_alpha = clampf(adaptive_alpha, 0.15f, 0.8f);
+    float adaptive_alpha = 0.7f + (fabsf(raw_err) * 1.5f);
+    adaptive_alpha = clampf(adaptive_alpha, 0.7f, 1.0f);
 
     m_filteredCorrection += adaptive_alpha * (raw_err - m_filteredCorrection);
 
@@ -106,34 +106,29 @@ uint8_t LineArrayModule::update(bool do_print)
     m_steeringCommand = clampf(m_steeringCommand + steeringDelta, STEERING_MIN, STEERING_MAX);
 
     // --- ADVANCED DRIVE SCALING ---
-    const float max_error = 0.5f; // Roughly max angle in radians
 
-    // 1. Squared Error Profile
-    // Keeps drive_scale near 1.0 on small wiggles, but drops it sharply on large errors
-    float normalized_err = err / max_error;
-    float drive_scale = 1.0f - (normalized_err * normalized_err);
+    float abs_err = fabsf(err);
 
-    // 2. Predictive Braking (Using EMA Delta)
-    // If raw position is further from center than the filtered error, the error is actively growing.
-    float abs_position = fabsf(raw_err);
-    float abs_filtered = fabsf(err);
-
-    if (abs_position > abs_filtered) {
-        // Calculate how much worse the error is getting right now
-        float error_growth = abs_position - abs_filtered;
-
-        // Subtract a braking penalty based on how fast the curve is appearing.
-        drive_scale -= (error_growth * 2.0f);
+    // 1. Create a "Deadzone" (Ignore the first 0.15 radians of error)
+    // This allows the robot to blast down straightaways at 100% speed
+    // even if the line wiggles or only 1-2 LEDs are active!
+    float braking_error = abs_err - 0.15f;
+    if (braking_error < 0.0f) {
+        braking_error = 0.0f;
     }
 
-    // Minimum power in curves
-    const float MIN_DRIVE_SCALE = 0.6f;
+    // 2. Proportional Braking (only applies outside the deadzone)
+    // We bumped the multiplier to 3.0f so it still brakes hard for real curves!
+    float drive_scale = 1.0f - (braking_error * 4.0f);
 
+    const float MIN_DRIVE_SCALE = 0.5f;
+
+    // Clamp the speed so it never goes too slow or too fast
     if (drive_scale < MIN_DRIVE_SCALE) {
         drive_scale = MIN_DRIVE_SCALE;
     }
-    if (drive_scale > 1.5f) {
-        drive_scale = 1.5f;
+    if (drive_scale > 1.0f) {
+        drive_scale = 1.0f;
     }
 
     m_driveVoltage = -DRIVE_VOLTAGE_FULL * drive_scale;

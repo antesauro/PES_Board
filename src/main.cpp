@@ -132,6 +132,12 @@ int main()
         main_task_timer.reset();
 
         user_button_crane_control.update();
+
+        // If the button is pressed while driving, instantly force the robot back to READY and trigger a reset!
+        if (!do_execute_main_task && robot_state != RobotState::INITIAL && robot_state != RobotState::READY) {
+            do_reset_all_once = true;
+            robot_state = RobotState::READY;
+        }
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -153,46 +159,50 @@ int main()
             case RobotState::READY:
                 printReadyState();
 
-                if (do_execute_main_task) {
-                    robot_state = RobotState::START;
-                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
-                    gripper_actuators::enableFastMode();
+                // 1. DO THE RESET FIRST
+                if (do_reset_all_once) {
+                    do_reset_all_once = false;
 
-                    led1 = 1;
+                    // Reset all variables
+                    robot_state = RobotState::INITIAL;
+                    rot_abgegeben = false;
+                    gelb_abgegeben = false;
+                    blau_abgegeben = false;
+                    gruen_abgegeben = false;
+                    schon_ein_paeckchen_aufgenommen = 0;
+                    house_event_cooldown_cycles = 0;
+                    house_stop_confirm_cycles = 0;
+                    house_stop_timeout_cycles_remaining = 0;
+                    pickup_color_retry_cycles = 0;
+                    deliver_color_retry_cycles = 0;
+                    pickup_candidate_color = 0;
+                    pickup_candidate_count = 0;
+                    deliver_candidate_color = 0;
+                    deliver_candidate_count = 0;
+                    color_sensor_module.resetPackageColorHold();
+                    print_cycle_counter = 0;
 
-                } else {
-                    // the following code block gets executed only once
-                    if (do_reset_all_once) {
-                        do_reset_all_once = false;
-                        // --- variables and objects that should be reset go here ---
-                        // reset variables and objects
-                        robot_state = RobotState::INITIAL;
-                        rot_abgegeben = false;
-                        gelb_abgegeben = false;
-                        blau_abgegeben = false;
-                        gruen_abgegeben = false;
-                        schon_ein_paeckchen_aufgenommen = 0;
-                        house_event_cooldown_cycles = 0;
-                        house_stop_confirm_cycles = 0;
-                        house_stop_timeout_cycles_remaining = 0;
-                        pickup_color_retry_cycles = 0;
-                        deliver_color_retry_cycles = 0;
-                        pickup_candidate_color = 0;
-                        pickup_candidate_count = 0;
-                        deliver_candidate_color = 0;
-                        deliver_candidate_count = 0;
-                        color_sensor_module.resetPackageColorHold();
-                        print_cycle_counter = 0;
-                        servo_module.disable();
-                        motor_module.disable();
-                        gripper_actuators::returnSlow();
-                        crane_rope_motor.disableMotors();
-                        led1 = 0;
-                        distance_traveled = 0.0f;
-                        startup_rotation = 0.0f;
-                    }
+                    servo_module.disable();
+                    motor_module.disable();
+                    gripper_actuators::returnSlow();
+                    crane_rope_motor.disableMotors();
+
+                    led1 = 0;
+                    distance_traveled = 0.0f;
+                    startup_rotation = 0.0f;
+
+                    // Break out of the switch! This forces the code to run INITIAL on the next frame
+                    // to safely wake the servos back up before trying to start.
+                    break;
                 }
 
+                // 2. START THE RUN
+                if (do_execute_main_task) {
+                    robot_state = RobotState::START;
+                    startup_rotation = motor_module.getRotation();
+                    gripper_actuators::enableFastMode();
+                    led1 = 1;
+                }
                 break;
             case RobotState::START: {
                 const bool do_print = (print_cycle_counter == 0);
@@ -216,12 +226,12 @@ int main()
                 } else if (start_sequence_step == 2) {
                     motor_module.setVelocity(-1.0f);
                     servo_module.setSteeringAngle(0.15f);
-                    if (distance_traveled >= 4.4f)
+                    if (distance_traveled >= 4.8f)
                         start_sequence_step = 3;
                 } else if (start_sequence_step == 3) {
-                    motor_module.setVelocity(-0.5f);
-                    servo_module.setSteeringAngle(0.5f);
-                    if (distance_traveled >= 4.6f)
+                    motor_module.setVelocity(-0.3f);
+                    servo_module.setSteeringAngle(0.55f);
+                    if (distance_traveled >= 5.2f)
                         start_sequence_step = 4;
                 } else if (start_sequence_step == 4) {
                     robot_state = RobotState::DRIVE;

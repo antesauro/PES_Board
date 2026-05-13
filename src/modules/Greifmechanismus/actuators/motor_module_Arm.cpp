@@ -1,12 +1,12 @@
 #include "motor_module_Arm.h"
 
-#include "PESBoardPinMap.h"
-
 #include <cmath>
 
-MotorModuleArm::MotorModuleArm() :
-    m_enableMotors(PB_ENABLE_DCMOTORS),
-    m_motor(PB_PWM_M2, PB_ENC_A_M2, PB_ENC_B_M2, GEAR_RATIO, KN, VOLTAGE_MAX)
+#include "PESBoardPinMap.h"
+
+MotorModuleArm::MotorModuleArm()
+    : m_enableMotors(PB_ENABLE_DCMOTORS)
+    , m_motor(PB_PWM_M2, PB_ENC_A_M2, PB_ENC_B_M2, GEAR_RATIO, KN, VOLTAGE_MAX)
 {
     initialize();
 }
@@ -16,7 +16,9 @@ void MotorModuleArm::initialize()
     enableMotors();
     m_motor.enableMotionPlanner();
     const float current_rotations = m_motor.getRotation();
-    m_motor.setMotionPlannerVelocity(0.0f);
+    m_motor.setMaxVelocity(15.0f);     // Allow up to 15 rotations per second
+    m_motor.setMaxAcceleration(25.0f); // Accelerate violently
+    m_motor.setMotionPlannerVelocity(1.0f);
     m_motor.setMotionPlannerPosition(current_rotations);
     m_initialized = true;
 }
@@ -33,10 +35,7 @@ void MotorModuleArm::setVelocity(float velocity_rps)
     m_motor.setVelocity(velocity_rps);
 }
 
-float MotorModuleArm::get() const
-{
-    return m_motor.getRotation();
-}
+float MotorModuleArm::get() const { return m_motor.getRotation(); }
 
 bool MotorModuleArm::setAndWait(float rotations, float tolerance, int timeout_ms)
 {

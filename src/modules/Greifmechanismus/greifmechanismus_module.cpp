@@ -35,8 +35,8 @@ void initActuators()
     (void)armMotor();
 }
 
-constexpr int SERVO_REACTION_TIME_MS = 750;
-constexpr int SERVO_REACTION_TIME_RETURN_MS = 350; // schneller Rücklauf nach Seil hochgezogen
+constexpr int SERVO_REACTION_TIME_MS = 400;
+constexpr int SERVO_REACTION_TIME_RETURN_MS = 200; // schneller Rücklauf nach Seil hochgezogen
 
 void waitServoReaction() { thread_sleep_for(SERVO_REACTION_TIME_MS); }
 void waitServoReactionReturn() { thread_sleep_for(SERVO_REACTION_TIME_RETURN_MS); }
@@ -142,8 +142,8 @@ void enableFastMode()
 void returnSlow(){
     initActuators();
     // 1. Switch back to your slow reset speed
-    drehkranzServo().setSpeed(0.15f);
-    lenkungServo().setSpeed(0.15f);
+    drehkranzServo().setSpeed(0.3f);
+    lenkungServo().setSpeed(0.3f);
     
     // 2. Command them to gently return to the 0.5 and 0.25 start positions
     drehkranzServo().center();
@@ -281,7 +281,7 @@ void performPickupAt(float drehkranz_angle, float lenkung_angle, float seil_umdr
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
-    thread_sleep_for(1200);
+    thread_sleep_for(400);
     armMotor().setAndWait(base - seil_umdrehungen);
     armMotor().setAndWait(base);
 }
@@ -359,7 +359,7 @@ void performDropoffAt(float drehkranz_angle, float lenkung_angle, float seil_umd
 {
     moveToHouseWorkPosition(drehkranz_angle, lenkung_angle, via_tunnel);
     const float base = armBasePosition();
-    thread_sleep_for(1200);
+    thread_sleep_for(400);
     armMotor().setAndWait(base - seil_umdrehungen);
     armMotor().setAndWait(base);
 }
