@@ -2,14 +2,14 @@
 
 #include "PESBoardPinMap.h"
 
-static constexpr float CALIB_BLACK_R = 355.97f;
-static constexpr float CALIB_BLACK_G = 355.37f;
-static constexpr float CALIB_BLACK_B = 1320.07f;
-static constexpr float CALIB_BLACK_C = 535.65f;
-static constexpr float CALIB_WHITE_R = 2197.95f;
-static constexpr float CALIB_WHITE_G = 2336.46f;
-static constexpr float CALIB_WHITE_B = 8210.50f;
-static constexpr float CALIB_WHITE_C = 3553.85f;
+static constexpr float CALIB_BLACK_R = 512.19f;
+static constexpr float CALIB_BLACK_G = 514.56f;
+static constexpr float CALIB_BLACK_B = 795.54f;
+static constexpr float CALIB_BLACK_C = 1963.94f;
+static constexpr float CALIB_WHITE_R = 2582.65f;
+static constexpr float CALIB_WHITE_G = 2831.28f;
+static constexpr float CALIB_WHITE_B = 4452.38f;
+static constexpr float CALIB_WHITE_C = 10288.24f;
 
 static int sensorColorToPackageColor(int sensor_color)
 {
@@ -54,10 +54,15 @@ void ColorSensorModule::printColor()
     const char* sensor_color_str = m_sensor.getColorString(sensor_color_num);
     const int package_color_num = detectedPackageColor();
 
-    printf("Color sensor=%d (%s) package=%d\n",
-           sensor_color_num,
-           sensor_color_str,
-           package_color_num);
+    const float* raw  = m_sensor.readColor();      // filtered Hz [R,G,B,C]
+    const float* cal  = m_sensor.readColorCalib(); // white-balanced values the classifier uses
+    const float* norm = m_sensor.readColorNorm();  // normalized values
+
+    printf("sensor=%d (%s) | Hz R:%.1f G:%.1f B:%.1f C:%.1f | cal R:%.3f G:%.3f B:%.3f | norm R:%.3f G:%.3f B:%.3f\n",
+           sensor_color_num, sensor_color_str,
+           raw[0],  raw[1],  raw[2],  raw[3],
+           cal[0],  cal[1],  cal[2],
+           norm[0], norm[1], norm[2]);
 }
 
 int ColorSensorModule::detectedPackageColor()

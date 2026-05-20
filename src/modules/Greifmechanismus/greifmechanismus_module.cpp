@@ -59,16 +59,19 @@ void moveToTunnelPositionFast()
 
 void moveToHouseWorkPosition(float drehkranz_angle, float lenkung_angle, bool via_tunnel)
 {
-    lenkungServo().setSteeringAngle(lenkung_angle);
-    waitServoReaction();
-
+    // Move drehkranz to target position first
     if (via_tunnel) {
         drehkranzServo().setSteeringAngle(gripper_cfg::AUFNEHMEN_ABLEGEN_POS_tunnel_D);
         waitServoReaction();
     }
 
+    // Only then lower the lenkung to working position
+    lenkungServo().setSteeringAngle(lenkung_angle);
+    waitServoReaction();
+    
     drehkranzServo().setSteeringAngle(drehkranz_angle);
     waitServoReaction();
+
 }
 } // namespace
 
@@ -142,12 +145,31 @@ void enableFastMode()
 void returnSlow(){
     initActuators();
     // 1. Switch back to your slow reset speed
-    drehkranzServo().setSpeed(0.3f);
-    lenkungServo().setSpeed(0.3f);
+    drehkranzServo().setSpeed(0.4f);
+    lenkungServo().setSpeed(0.4f);
     
     // 2. Command them to gently return to the 0.5 and 0.25 start positions
     drehkranzServo().center();
     lenkungServo().center();
+}
+
+void testPositionSafety() {
+    struct Pose {float drehkranz; float lenkung;};
+
+    // Step through positions slowly and verify no collision
+    const Pose test_positions[] = {
+        {0.3f, 0.18f},
+        {0.62f, 0.38f},
+        {0.8f, 0.35f},
+    };
+
+    for (const Pose& pos : test_positions ) {
+        gripper_actuators::getArmMotor();  // make sure arm is at safe height first
+        drehkranzServo().setSteeringAngle(pos.drehkranz);
+        lenkungServo().setSteeringAngle(pos.lenkung);
+        thread_sleep_for(3000);  // give servo time to reach position
+        // visually inspect for collision before pressing button
+    }
 }
 } // namespace gripper_actuators
 

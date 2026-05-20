@@ -75,7 +75,7 @@ int main()
     abladen::AbladenModule abladen_module;
     MotorModuleArm &crane_rope_motor = gripper_actuators::getArmMotor();
     UserButtonCraneControl user_button_crane_control(
-        BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 5000, CRANE_MANUAL_UP_VELOCITY_RPS);
+        BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 3000, CRANE_MANUAL_UP_VELOCITY_RPS);
 
     user_button_crane_control.initialize();
 
@@ -152,19 +152,18 @@ int main()
                 crane_rope_motor.enableMotors();
 
                 color_sensor_module.update();
-
+                //gripper_actuators::testPositionSafety();
                 robot_state = RobotState::READY;
                 break;
 
             case RobotState::READY:
                 printReadyState();
-
+                color_sensor_module.printColor(); // For testing the colour recognition
                 // 1. DO THE RESET FIRST
                 if (do_reset_all_once) {
                     do_reset_all_once = false;
 
-                    // Reset all variables
-                    robot_state = RobotState::INITIAL;
+                    // Do NOT jump to INITIAL. We just wipe the variables and stay in READY!
                     rot_abgegeben = false;
                     gelb_abgegeben = false;
                     blau_abgegeben = false;
@@ -182,17 +181,20 @@ int main()
                     color_sensor_module.resetPackageColorHold();
                     print_cycle_counter = 0;
 
-                    servo_module.disable();
-                    motor_module.disable();
+                    // GENTLY STOP INSTEAD OF CUTTING POWER TO HARDWARE
+                    motor_module.stop();
+                    servo_module.center();
+
+                    // SEND CRANE HOME SLOWLY
                     gripper_actuators::returnSlow();
-                    crane_rope_motor.disableMotors();
+
+                    // FORCE A DELAY SO THE ARM HAS PHYSICAL TIME TO MOVE BEFORE STARTING!
+                    thread_sleep_for(1500);
 
                     led1 = 0;
                     distance_traveled = 0.0f;
                     startup_rotation = 0.0f;
 
-                    // Break out of the switch! This forces the code to run INITIAL on the next frame
-                    // to safely wake the servos back up before trying to start.
                     break;
                 }
 
@@ -226,12 +228,12 @@ int main()
                 } else if (start_sequence_step == 2) {
                     motor_module.setVelocity(-1.0f);
                     servo_module.setSteeringAngle(0.15f);
-                    if (distance_traveled >= 4.8f)
+                    if (distance_traveled >= 4.7f)
                         start_sequence_step = 3;
                 } else if (start_sequence_step == 3) {
                     motor_module.setVelocity(-0.3f);
                     servo_module.setSteeringAngle(0.55f);
-                    if (distance_traveled >= 5.2f)
+                    if (distance_traveled >= 5.0f)
                         start_sequence_step = 4;
                 } else if (start_sequence_step == 4) {
                     robot_state = RobotState::DRIVE;
@@ -287,7 +289,7 @@ int main()
                     printf("Lieferhaus erkannt! Farbe wird nach Stop bestimmt.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else {
-                    static constexpr float DRIVE_MAX_RPS = 1.5f;
+                    static constexpr float DRIVE_MAX_RPS = 1.2f;
                     const float drive_scale = line_array_module.driveVoltage() / 12.0f;
                     motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
                     servo_module.setSteeringAngle(line_array_module.steeringCommand());
@@ -499,8 +501,9 @@ int main()
 
                 if (delivered_now) {
                     if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
-                        robot_state = RobotState::INITIAL;
-                        toggle_do_execute_main_fcn(); // stop main task execution after final completed dropoff
+                        do_reset_all_once = true;
+                        do_execute_main_task = false;
+                        robot_state = RobotState::READY;
                     } else {
                         robot_state = RobotState::LOSFAHRENN;
                     }

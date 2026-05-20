@@ -6,17 +6,17 @@
 #include "debug_print.h"
 
 namespace {
-static constexpr float STEERING_CENTER = 0.5f;
+static constexpr float STEERING_CENTER = 0.55f;
 static constexpr float STEERING_MIN = 0.15f; // min servo position with 1.25 gear ratio
 static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gear ratio
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.073f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -3.0f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.30f;   // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -2.8f; // Aggressive booster for sharp curves
 
 // static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
-static constexpr float STEERING_STEP_MAX = 1.0f; // Keep servo fast
+static constexpr float STEERING_STEP_MAX = 0.65f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
@@ -53,13 +53,11 @@ uint8_t LineArrayModule::update(bool do_print)
     const uint8_t numActiveLeds = m_sensorBar.getNrOfLedsActive(); // gets number of active leds from sensor bar
     const float measuredAngle = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
 
-    // Inside update(bool useLinearOnly)
-    float raw_err = measuredAngle;
-    // If error is high, react fast. If error is low, filter heavily.
-    float adaptive_alpha = 0.7f + (fabsf(raw_err) * 1.5f);
-    adaptive_alpha = clampf(adaptive_alpha, 0.7f, 1.0f);
+    // Fixed (slow on straights, fast in curves):
+    float adaptive_alpha = 0.15f + (fabsf(measuredAngle) * 1.2f);
+    adaptive_alpha = clampf(adaptive_alpha, 0.55f, 0.85f);
 
-    m_filteredCorrection += adaptive_alpha * (raw_err - m_filteredCorrection);
+    m_filteredCorrection += adaptive_alpha * (measuredAngle - m_filteredCorrection);
 
     uint8_t event = EVENT_NONE;
     const uint8_t activeBits = raw & SENSOR_MASK_ALL_BITS;
@@ -68,7 +66,7 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 1. THE CURVE FILTER
     // If the error is large, we are in a curve. Only look for houses if we are driving straight!
-    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.2f;
+    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.25f;
 
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
@@ -85,20 +83,18 @@ uint8_t LineArrayModule::update(bool do_print)
         m_deliveryDetectStreak = 0;
 
     // 3. ASYMMETRIC EVENT TRIGGERS
-    // Pickup requires 2 frame. Delivery requires 2 frames to ignore the leading edge of a pickup tape!
-    if (m_pickupDetectStreak >= 2) {
+    // Pickup requires 4 frame. Delivery requires 4 frames to ignore the leading edge of a pickup tape!
+    if (m_pickupDetectStreak >= 4) {
         event = EVENT_PICKUP_HOUSE;
-    } else if (m_deliveryDetectStreak >= 2) {
+    } else if (m_deliveryDetectStreak >= 4) {
         event = EVENT_DELIVERY_HOUSE;
     }
 
     // --- NON-LINEAR P CONTROLLER MATH ---
     float err = m_filteredCorrection;
-    float steeringOutput =
-        (KP_LINEAR * err) +
-        (KP_NONLINEAR *
-         (err * err * err)); // Kubischen nicht Linearen anteil um das Vorzeichen zum behalten
-                             // und in Kurven eine deutliche Grössere Korrektur zu machen als auf gerade Linien
+    float cubic = KP_NONLINEAR * (err * err * err);
+    cubic = clampf(cubic, -0.18f, 0.18f); // prevent hairpin saturation
+    float steeringOutput = (KP_LINEAR * err) + cubic;
 
     // Apply the output to the target (using subtraction to steer the correct way)
     const float steeringTarget = STEERING_CENTER - steeringOutput;
@@ -112,16 +108,16 @@ uint8_t LineArrayModule::update(bool do_print)
     // 1. Create a "Deadzone" (Ignore the first 0.15 radians of error)
     // This allows the robot to blast down straightaways at 100% speed
     // even if the line wiggles or only 1-2 LEDs are active!
-    float braking_error = abs_err - 0.15f;
+    float braking_error = abs_err - 0.04f;
     if (braking_error < 0.0f) {
         braking_error = 0.0f;
     }
 
     // 2. Proportional Braking (only applies outside the deadzone)
     // We bumped the multiplier to 3.0f so it still brakes hard for real curves!
-    float drive_scale = 1.0f - (braking_error * 4.0f);
+    float drive_scale = 1.0f - (braking_error * 2.5f);
 
-    const float MIN_DRIVE_SCALE = 0.5f;
+    const float MIN_DRIVE_SCALE = 0.45f;
 
     // Clamp the speed so it never goes too slow or too fast
     if (drive_scale < MIN_DRIVE_SCALE) {
@@ -144,7 +140,7 @@ uint8_t LineArrayModule::update(bool do_print)
     }
 
     if (do_print)
-        printLineArrayDebug(raw, raw_err, m_filteredCorrection, m_steeringCommand, m_driveVoltage, event);
+        printLineArrayDebug(raw, measuredAngle, m_filteredCorrection, m_steeringCommand, m_driveVoltage, event);
 
     return event;
 }

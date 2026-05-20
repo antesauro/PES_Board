@@ -5,15 +5,15 @@ class MotorModuleArm;
 namespace gripper_cfg {
 
 // Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
-// 0.0f gegen hinten, 1.0g gegen vorne
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.7f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.45f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.20f;
+// 0.0f gegen hinten, 1.0f gegen vorne
+constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.8f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.62f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.30f;
 
 // Lenkung bei Aufnahme/Ablage am Haus fuer.
 // 0.0f hoch und 1.0f unten
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.5f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.4f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.35f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.38f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.18f;
 // Sicherheitswinkel fuer vertikale Ausrichtung des Arms
 constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
@@ -34,7 +34,7 @@ extern bool lager;
 
 // Seilhub fuer Haus und Lager.
 // ROT_GRUEN
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 3.7f;
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 4.0f;
 // blau_gruen
 constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 6.0f;
 // Lagerpos1
@@ -62,6 +62,7 @@ void disableArmMotor();
 void disableAll();
 void enableFastMode();
 void returnSlow();
+void testPositionSafety();
 } // namespace gripper_actuators
 
 static constexpr int K_LAGER_PLAETZE = 4;
