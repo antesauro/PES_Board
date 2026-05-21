@@ -3,7 +3,7 @@
 // The maximum speed for the servo is determined by testing and calibration.
 static constexpr float SERVO_MAX_SPEED = 0.8f;
 
-namespace arm_lenkung {
+namespace arm_steer {
 namespace {
 // Physical pulse width limits (seconds) determined by servo calibration.
 static constexpr float SERVO_D1_ANG_MIN = 0.035f;
@@ -11,7 +11,7 @@ static constexpr float SERVO_D1_ANG_MAX = 0.110f;
 static constexpr float SERVO_START_POSITION_D1 = 0.3f;
 static constexpr float SERVO_D1_ANG_MAX_NORMALIZED = 0.5f;
 
-float constrainLenkungNormalized(float value)
+float constrainSteerNorm(float value)
 {
     return (value > SERVO_D1_ANG_MAX_NORMALIZED) ? SERVO_D1_ANG_MAX_NORMALIZED : (value < 0.0f) ? 0.0f : value;
 }
@@ -35,7 +35,7 @@ void ServoModule::enable()
     }
 }
 
-void ServoModule::setSteeringAngle(float angle) { m_servo.setPulseWidth(constrainLenkungNormalized(angle)); }
+void ServoModule::setSteeringAngle(float angle) { m_servo.setPulseWidth(constrainSteerNorm(angle)); }
 
 void ServoModule::center() { m_servo.setPulseWidth(SERVO_START_POSITION_D1); }
 
@@ -46,9 +46,9 @@ void ServoModule::disable()
     if (m_servo.isEnabled())
         m_servo.disable();
 }
-} // namespace arm_lenkung
+} // namespace arm_steer
 
-namespace arm_drehkranz {
+namespace arm_turn {
 namespace {
 // Physical pulse width limits (seconds) determined by servo calibration.
 static constexpr float SERVO_D2_ANG_MIN = 0.035f;
@@ -89,4 +89,4 @@ void ServoModule::disable()
     if (m_servo.isEnabled())
         m_servo.disable();
 }
-} // namespace arm_drehkranz
+} // namespace arm_turn

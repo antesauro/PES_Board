@@ -2,7 +2,7 @@
 
 #include "Servo.h"
 
-namespace arm_lenkung {
+namespace arm_steer {
 class ServoModule
 {
 public:
@@ -20,7 +20,7 @@ private:
 };
 }
 
-namespace arm_drehkranz {
+namespace arm_turn {
 class ServoModule
 {
 public:

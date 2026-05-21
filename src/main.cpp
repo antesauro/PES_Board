@@ -71,19 +71,19 @@ int main()
     ColorSensorModule color_sensor_module;
     ServoModule servo_module;
     MotorModule motor_module;
-    aufnehmen::AufnehmenModule aufnehmen_module;
-    abladen::AbladenModule abladen_module;
+    pickup::PickupModule pickup_module;
+    dropoff::DropoffModule dropoff_module;
     MotorModuleArm &crane_rope_motor = gripper_actuators::getArmMotor();
     UserButtonCraneControl user_button_crane_control(
         BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 3000, CRANE_MANUAL_UP_VELOCITY_RPS);
 
     user_button_crane_control.initialize();
 
-    bool rot_abgegeben = false;
-    bool gelb_abgegeben = false;
-    bool blau_abgegeben = false;
-    bool gruen_abgegeben = false;
-    int schon_ein_paeckchen_aufgenommen = 0;
+    bool red_done   = false;
+    bool yellow_done = false;
+    bool blue_done  = false;
+    bool green_done = false;
+    int pkg_held = 0; // 0=none, 1=red, 2=blue, 3=yellow, 4=green
     int house_event_cooldown_cycles = 0;
     const int house_event_cooldown_set_cycles = 20; // 15 * 20ms = 350ms
     int house_stop_confirm_cycles = 0;
@@ -114,7 +114,7 @@ int main()
         DELIVER,
         SLEEP,
         EMERGENCY,
-        LOSFAHRENN
+        DEPART
     } robot_state = RobotState::INITIAL;
 
     // Emergency toggle for the while loop
@@ -143,12 +143,12 @@ int main()
             case RobotState::INITIAL:
                 printInitialState();
 
-                // Fahr-Servo initialisieren und aktivieren
+                // Init drive servo and motor
                 motor_module.initialize();
                 servo_module.initialize();
                 servo_module.center();
-                // Greifmechanismus-Servos initialisieren und aktivieren
-                gripper_actuators::initializeAll();
+                // Init gripper servos
+                gripper_actuators::initAll();
                 crane_rope_motor.enableMotors();
 
                 color_sensor_module.update();
@@ -164,11 +164,11 @@ int main()
                     do_reset_all_once = false;
 
                     // Do NOT jump to INITIAL. We just wipe the variables and stay in READY!
-                    rot_abgegeben = false;
-                    gelb_abgegeben = false;
-                    blau_abgegeben = false;
-                    gruen_abgegeben = false;
-                    schon_ein_paeckchen_aufgenommen = 0;
+                    red_done   = false;
+                    yellow_done = false;
+                    blue_done  = false;
+                    green_done = false;
+                    pkg_held = 0;
                     house_event_cooldown_cycles = 0;
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = 0;
@@ -262,10 +262,10 @@ int main()
                 if (house_event_cooldown_cycles > 0)
                     house_event_cooldown_cycles--;
 
-                // Event-Prüfung VOR dem Motor-Setzen:
-                // wenn ein Haus erkannt wird, zuerst stoppen – nicht erst fahren und dann stoppen.
+                // Check for house events BEFORE setting motor:
+                // when a house is detected, stop first — do not drive then stop.
                 if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_PICKUP_HOUSE &&
-                    schon_ein_paeckchen_aufgenommen == 0) {
+                    pkg_held == 0) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
@@ -274,10 +274,10 @@ int main()
                     pickup_candidate_color = 0;
                     pickup_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    printf("Abholhaus erkannt! Farbe wird nach Stop bestimmt.\n");
+                    printf("Pickup house detected! Color determined after stop.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else if (house_event_cooldown_cycles == 0 && action_code == LineArrayModule::EVENT_DELIVERY_HOUSE &&
-                           schon_ein_paeckchen_aufgenommen) {
+                           pkg_held) {
                     motor_module.stop();
                     house_stop_confirm_cycles = 0;
                     house_stop_timeout_cycles_remaining = house_stop_timeout_cycles;
@@ -286,7 +286,7 @@ int main()
                     deliver_candidate_color = 0;
                     deliver_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    printf("Lieferhaus erkannt! Farbe wird nach Stop bestimmt.\n");
+                    printf("Delivery house detected! Color determined after stop.\n");
                     house_event_cooldown_cycles = house_event_cooldown_set_cycles;
                 } else {
                     static constexpr float DRIVE_MAX_RPS = 1.2f;
@@ -322,13 +322,13 @@ int main()
                 printPickupState();
                 motor_module.stop();
                 color_sensor_module.update();
-                const int farbe = color_sensor_module.detectedPackageColor();
+                const int color = color_sensor_module.detectedPackageColor();
 
-                if (farbe != 0) {
-                    if (farbe == pickup_candidate_color) {
+                if (color != 0) {
+                    if (color == pickup_candidate_color) {
                         pickup_candidate_count++;
                     } else {
-                        pickup_candidate_color = farbe;
+                        pickup_candidate_color = color;
                         pickup_candidate_count = 1;
                     }
                 } else {
@@ -338,70 +338,68 @@ int main()
 
                 const bool pickup_color_is_stable =
                     (pickup_candidate_color != 0) && (pickup_candidate_count >= PICKUP_COLOR_STABLE_CYCLES);
-                const int stable_farbe = pickup_color_is_stable ? pickup_candidate_color : 0;
+                const int stable_color = pickup_color_is_stable ? pickup_candidate_color : 0;
 
-                if (stable_farbe == 1 and !rot_abgegeben and
-                    (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
-                    aufnehmen_module.aufnehmenRot();
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 1;
+                if (stable_color == 1 and !red_done and
+                    (gripper_cfg::use_storage or pkg_held == 0)) {
+                    pickup_module.pickupRed();
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 1;
                     }
                     pickup_candidate_color = 0;
                     pickup_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    robot_state = RobotState::LOSFAHRENN;
-                } else if (stable_farbe == 2 and !blau_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
-                    aufnehmen_module.aufnehmenBlau();
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 2;
+                    robot_state = RobotState::DEPART;
+                } else if (stable_color == 2 and !blue_done and
+                           (gripper_cfg::use_storage or pkg_held == 0)) {
+                    pickup_module.pickupBlue();
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 2;
                     }
                     pickup_candidate_color = 0;
                     pickup_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    robot_state = RobotState::LOSFAHRENN;
-                } else if (stable_farbe == 3 and !gelb_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
-                    aufnehmen_module.aufnehmenGelb();
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 3;
+                    robot_state = RobotState::DEPART;
+                } else if (stable_color == 3 and !yellow_done and
+                           (gripper_cfg::use_storage or pkg_held == 0)) {
+                    pickup_module.pickupYellow();
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 3;
                     }
                     pickup_candidate_color = 0;
                     pickup_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    robot_state = RobotState::LOSFAHRENN;
-                } else if (stable_farbe == 4 and !gruen_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 0)) {
-                    aufnehmen_module.aufnehmenGruen();
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 4;
+                    robot_state = RobotState::DEPART;
+                } else if (stable_color == 4 and !green_done and
+                           (gripper_cfg::use_storage or pkg_held == 0)) {
+                    pickup_module.pickupGreen();
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 4;
                     }
                     pickup_candidate_color = 0;
                     pickup_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
-                    robot_state = RobotState::LOSFAHRENN;
+                    robot_state = RobotState::DEPART;
                 } else {
-                    // Wenn eine stabile Farbe erkannt wurde, aber kein Pickup nötig → sofort weiterfahren
+                    // Stable color detected but no pickup needed → continue immediately
                     if (pickup_color_is_stable) {
-                        printf("Pickup: Farbe %s erkannt, kein Pickup noetig. Fahre sofort weiter.\n",
+                        printf("Pickup: color %s detected, no pickup needed. Continuing.\n",
                                packageColorToString(pickup_candidate_color));
                         pickup_candidate_color = 0;
                         pickup_candidate_count = 0;
                         color_sensor_module.resetPackageColorHold();
-                        robot_state = RobotState::LOSFAHRENN;
+                        robot_state = RobotState::DEPART;
                     } else {
                         pickup_color_retry_cycles++;
                         if (pickup_color_retry_cycles >= color_retry_timeout_cycles) {
-                            printf("Pickup: keine stabile gueltige Farbe erkannt (letzte=%s, kandidat=%s, count=%d). "
-                                   "Fahre "
-                                   "weiter.\n",
-                                   packageColorToString(farbe),
+                            printf("Pickup: no stable valid color (last=%s, cand=%s, cnt=%d). Continuing.\n",
+                                   packageColorToString(color),
                                    packageColorToString(pickup_candidate_color),
                                    pickup_candidate_count);
                             pickup_candidate_color = 0;
                             pickup_candidate_count = 0;
                             color_sensor_module.resetPackageColorHold();
-                            robot_state = RobotState::LOSFAHRENN;
+                            robot_state = RobotState::DEPART;
                         }
                     }
                 }
@@ -434,13 +432,13 @@ int main()
                 motor_module.stop();
                 color_sensor_module.update();
 
-                const int farbe = color_sensor_module.detectedPackageColor();
+                const int color = color_sensor_module.detectedPackageColor();
 
-                if (farbe != 0) {
-                    if (farbe == deliver_candidate_color) {
+                if (color != 0) {
+                    if (color == deliver_candidate_color) {
                         deliver_candidate_count++;
                     } else {
-                        deliver_candidate_color = farbe;
+                        deliver_candidate_color = color;
                         deliver_candidate_count = 1;
                     }
                 } else {
@@ -450,48 +448,48 @@ int main()
 
                 const bool deliver_color_is_stable =
                     (deliver_candidate_color != 0) && (deliver_candidate_count >= DELIVER_COLOR_STABLE_CYCLES);
-                const int stable_farbe = deliver_color_is_stable ? deliver_candidate_color : 0;
+                const int stable_color = deliver_color_is_stable ? deliver_candidate_color : 0;
                 bool delivered_now = false;
 
-                if (stable_farbe == 1 and !rot_abgegeben and
-                    (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 1)) {
-                    abladen_module.abladenRot();
-                    rot_abgegeben = true;
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 0;
+                if (stable_color == 1 and !red_done and
+                    (gripper_cfg::use_storage or pkg_held == 1)) {
+                    dropoff_module.dropoffRed();
+                    red_done = true;
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 0;
                     }
                     deliver_candidate_color = 0;
                     deliver_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
                     delivered_now = true;
-                } else if (stable_farbe == 2 and !blau_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 2)) {
-                    abladen_module.abladenBlau();
-                    blau_abgegeben = true;
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 0;
+                } else if (stable_color == 2 and !blue_done and
+                           (gripper_cfg::use_storage or pkg_held == 2)) {
+                    dropoff_module.dropoffBlue();
+                    blue_done = true;
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 0;
                     }
                     deliver_candidate_color = 0;
                     deliver_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
                     delivered_now = true;
-                } else if (stable_farbe == 3 and !gelb_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 3)) {
-                    abladen_module.abladenGelb();
-                    gelb_abgegeben = true;
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 0;
+                } else if (stable_color == 3 and !yellow_done and
+                           (gripper_cfg::use_storage or pkg_held == 3)) {
+                    dropoff_module.dropoffYellow();
+                    yellow_done = true;
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 0;
                     }
                     deliver_candidate_color = 0;
                     deliver_candidate_count = 0;
                     color_sensor_module.resetPackageColorHold();
                     delivered_now = true;
-                } else if (stable_farbe == 4 and !gruen_abgegeben and
-                           (gripper_cfg::lager or schon_ein_paeckchen_aufgenommen == 4)) {
-                    abladen_module.abladenGruen();
-                    gruen_abgegeben = true;
-                    if (!gripper_cfg::lager) {
-                        schon_ein_paeckchen_aufgenommen = 0;
+                } else if (stable_color == 4 and !green_done and
+                           (gripper_cfg::use_storage or pkg_held == 4)) {
+                    dropoff_module.dropoffGreen();
+                    green_done = true;
+                    if (!gripper_cfg::use_storage) {
+                        pkg_held = 0;
                     }
                     deliver_candidate_color = 0;
                     deliver_candidate_count = 0;
@@ -500,46 +498,45 @@ int main()
                 }
 
                 if (delivered_now) {
-                    if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
+                    if (red_done && blue_done && yellow_done && green_done) {
                         do_reset_all_once = true;
                         do_execute_main_task = false;
                         robot_state = RobotState::READY;
                     } else {
-                        robot_state = RobotState::LOSFAHRENN;
+                        robot_state = RobotState::DEPART;
                     }
                 } else {
-                    // Wenn eine stabile Farbe erkannt wurde, aber kein Deliver nötig → sofort weiterfahren
+                    // Stable color detected but no delivery needed → continue immediately
                     if (deliver_color_is_stable) {
-                        printf("Deliver: Farbe %s erkannt, kein Deliver noetig. Fahre sofort weiter.\n",
+                        printf("Deliver: color %s, no delivery needed. Continuing.\n",
                                packageColorToString(deliver_candidate_color));
                         deliver_candidate_color = 0;
                         deliver_candidate_count = 0;
                         color_sensor_module.resetPackageColorHold();
-                        robot_state = RobotState::LOSFAHRENN;
+                        robot_state = RobotState::DEPART;
                     } else {
                         deliver_color_retry_cycles++;
                         if (deliver_color_retry_cycles >= color_retry_timeout_cycles) {
-                            printf("Deliver: keine stabile passende Farbe erkannt (letzte=%s, kandidat=%s, count=%d). "
-                                   "Fahre weiter.\n",
-                                   packageColorToString(farbe),
+                            printf("Deliver: no stable matching color (last=%s, cand=%s, cnt=%d). Continuing.\n",
+                                   packageColorToString(color),
                                    packageColorToString(deliver_candidate_color),
                                    deliver_candidate_count);
                             deliver_candidate_color = 0;
                             deliver_candidate_count = 0;
                             color_sensor_module.resetPackageColorHold();
-                            robot_state = RobotState::LOSFAHRENN;
+                            robot_state = RobotState::DEPART;
                         }
                     }
                 }
                 break;
             }
 
-            case RobotState::LOSFAHRENN:
+            case RobotState::DEPART:
 
-                printReadyState();
+                printDepartState();
                 servo_module.setSteeringAngle(0.5f);
                 motor_module.setRotation(motor_module.getRotation() +
-                                         0.5f); // drive forward for a bit to leave the house area
+                                         0.5f); // drive forward a bit to leave the house area
 
                 robot_state = RobotState::DRIVE;
                 break;
@@ -553,8 +550,8 @@ int main()
                 printEmergencyState();
                 motor_module.disable();
                 servo_module.disable();
-                gripper_actuators::disableDrehkranzServo();
-                gripper_actuators::disableLenkungServo();
+                gripper_actuators::disableTurnServo();
+                gripper_actuators::disableSteerServo();
                 crane_rope_motor.disableMotors();
                 // the transition to the emergency state causes the execution of the commands contained
                 // in the outer else statement scope, and since do_reset_all_once is true the system undergoes a

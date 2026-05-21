@@ -4,60 +4,54 @@ class MotorModuleArm;
 
 namespace gripper_cfg {
 
-// Drehkranz-Positionen fuer Farben am Haus/Aufnahme.
-// 0.0f gegen hinten, 1.0f gegen vorne
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.8f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.62f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.29f;
+// Turntable positions for house pickup/dropoff.
+// 0.0 = back, 1.0 = front
+constexpr float TUNNEL_TURN               = 0.8f;
+constexpr float RED_YELLOW_TURN           = 0.62f;
+constexpr float BLUE_GREEN_TURN           = 0.29f;
 
-// Lenkung bei Aufnahme/Ablage am Haus fuer.
-// 0.0f hoch und 1.0f unten
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.3f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.36f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.15f;
-// Sicherheitswinkel fuer vertikale Ausrichtung des Arms
-constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
+// Arm steering angles for house pickup/dropoff.
+// 0.0 = up, 1.0 = down
+constexpr float TUNNEL_STEER              = 0.3f;
+constexpr float RED_YELLOW_STEER          = 0.36f;
+constexpr float BLUE_GREEN_STEER          = 0.15f;
+// Safety angle for vertical arm alignment
+constexpr float VERT_SAFETY_STEER         = 1.0f;
 
-// Lagerplatz-Positionen am Drehkranz.
-constexpr float LAGER_POS_1_D = 0.0;
-constexpr float LAGER_POS_2_D = 0.0f;
-constexpr float LAGER_POS_3_D = 0.0f;
-constexpr float LAGER_POS_4_D = 0.0f;
+// Storage slot turntable positions.
+constexpr float SLOT_1_TURN = 0.0;
+constexpr float SLOT_2_TURN = 0.0f;
+constexpr float SLOT_3_TURN = 0.0f;
+constexpr float SLOT_4_TURN = 0.0f;
 
-// Lenkung bei Lagerplaetzen.
-constexpr float LAGER_POS_1_L = 0.0f;
-constexpr float LAGER_POS_2_L = 0.0f;
-constexpr float LAGER_POS_3_L = 0.0f;
-constexpr float LAGER_POS_4_L = 0.0f;
-// false: einzelnes Paket; true: Paket wird zusaetzlich im Lager verwaltet.
-extern bool lager;
+// Steering angles for storage slots.
+constexpr float SLOT_1_STEER = 0.0f;
+constexpr float SLOT_2_STEER = 0.0f;
+constexpr float SLOT_3_STEER = 0.0f;
+constexpr float SLOT_4_STEER = 0.0f;
+// false: single package; true: also manage in storage.
+extern bool use_storage;
 
-// Seilhub fuer Haus und Lager.
-// ROT_GRUEN
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 5.0f;
-// blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 6.2f;
-// Lagerpos1
-constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
-// Lagerpos2
-constexpr float SEIL_ROTATIONEN_LAGER_POS_2 = 2.5f;
-// Lagerpos3
-constexpr float SEIL_ROTATIONEN_LAGER_POS_3 = 2.5f;
-// Lagerpos4
-constexpr float SEIL_ROTATIONEN_LAGER_POS_4 = 2.5f;
+// Rope turns for house and storage.
+constexpr float ROPE_RED_YELLOW  = 5.0f;
+constexpr float ROPE_BLUE_GREEN  = 6.2f;
+constexpr float ROPE_SLOT_1      = 2.5f;
+constexpr float ROPE_SLOT_2      = 2.5f;
+constexpr float ROPE_SLOT_3      = 2.5f;
+constexpr float ROPE_SLOT_4      = 2.5f;
 
 } // namespace gripper_cfg
 
 static constexpr float SERVO_MAX_SPEED = 1.5f;
 
 namespace gripper_actuators {
-void initializeDrehkranzServo();
-void initializeLenkungServo();
-void initializeArmMotor();
-void initializeAll();
+void initTurnServo();
+void initSteerServo();
+void initArmMotor();
+void initAll();
 MotorModuleArm &getArmMotor();
-void disableDrehkranzServo();
-void disableLenkungServo();
+void disableTurnServo();
+void disableSteerServo();
 void disableArmMotor();
 void disableAll();
 void enableFastMode();
@@ -65,43 +59,47 @@ void returnSlow();
 void testPositionSafety();
 } // namespace gripper_actuators
 
-static constexpr int K_LAGER_PLAETZE = 4;
-static constexpr int K_LAGER_LEER = 0;
-static constexpr int K_FARBE_ROT = 1;
-static constexpr int K_FARBE_BLAU = 2;
-static constexpr int K_FARBE_GELB = 3;
-static constexpr int K_FARBE_GRUEN = 4;
+static constexpr int K_SLOTS  = 4;
+static constexpr int K_EMPTY  = 0;
+static constexpr int K_RED    = 1;
+static constexpr int K_BLUE   = 2;
+static constexpr int K_YELLOW = 3;
+static constexpr int K_GREEN  = 4;
 
-namespace lagern {
-// Shared storage state: 0=leer, 1=rot, 2=blau, 3=gelb, 4=gruen.
-extern int g_lager_pos_1;
-extern int g_lager_pos_2;
-extern int g_lager_pos_3;
-extern int g_lager_pos_4;
-} // namespace lagern
+namespace storage {
+// Slot state: 0=empty, 1=red, 2=blue, 3=yellow, 4=green.
+extern int g_slot_1;
+extern int g_slot_2;
+extern int g_slot_3;
+extern int g_slot_4;
 
-namespace aufnehmen {
-class AufnehmenModule
+bool maybeStore(int color);
+bool maybeRetrieve(int color);
+bool isFull();
+} // namespace storage
+
+namespace pickup {
+class PickupModule
 {
 public:
-    AufnehmenModule();
+    PickupModule();
 
-    void aufnehmenRot();
-    void aufnehmenBlau();
-    void aufnehmenGelb();
-    void aufnehmenGruen();
+    void pickupRed();
+    void pickupBlue();
+    void pickupYellow();
+    void pickupGreen();
 };
-} // namespace aufnehmen
+} // namespace pickup
 
-namespace abladen {
-class AbladenModule
+namespace dropoff {
+class DropoffModule
 {
 public:
-    AbladenModule();
+    DropoffModule();
 
-    void abladenRot();
-    void abladenBlau();
-    void abladenGelb();
-    void abladenGruen();
+    void dropoffRed();
+    void dropoffBlue();
+    void dropoffYellow();
+    void dropoffGreen();
 };
-} // namespace abladen
+} // namespace dropoff

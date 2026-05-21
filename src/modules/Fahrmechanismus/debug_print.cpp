@@ -39,10 +39,10 @@ void printDeliverState()
 #endif
 }
 
-void printLosfahrennState()
+void printDepartState()
 {
 #if DEBUG_PRINT_ENABLE
-    printf("LOSFAHRENN\n");
+    printf("DEPART\n");
 #endif
 }
 
@@ -73,7 +73,7 @@ void printDriveStatus(ColorSensorModule& color_sensor_module)
 void printPickupHouseDistanceMm(int distance_mm)
 {
 #if DEBUG_PRINT_ENABLE
-    printf("Querlinie Abhol-Haus: %d mm\n", distance_mm);
+    printf("Pickup house width: %d mm\n", distance_mm);
 #else
     (void)distance_mm;
 #endif
