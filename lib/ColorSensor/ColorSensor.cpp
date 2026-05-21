@@ -1,4 +1,5 @@
 #include "ColorSensor.h"
+
 #include <cmath>
 
 // Implementation notes:
@@ -12,14 +13,15 @@
  *
  * Sets a default filter and scaling, loads calibration references, then starts the worker thread.
  */
-ColorSensor::ColorSensor(PinName pin) : m_PwmIn(pin),
-                                        m_Led(COLOR_SENSOR_LED, 0),
-                                        m_S0(COLOR_SENSOR_S0, 0),
-                                        m_S1(COLOR_SENSOR_S1, 0),
-                                        m_S2(COLOR_SENSOR_S2, 0),
-                                        m_S3(COLOR_SENSOR_S3, 0),
-                                        m_Thread(osPriorityLow),
-                                        m_AvgFilter{AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER)}
+ColorSensor::ColorSensor(PinName pin)
+    : m_PwmIn(pin)
+    , m_Led(COLOR_SENSOR_LED, 0)
+    , m_S0(COLOR_SENSOR_S0, 0)
+    , m_S1(COLOR_SENSOR_S1, 0)
+    , m_S2(COLOR_SENSOR_S2, 0)
+    , m_S3(COLOR_SENSOR_S3, 0)
+    , m_Thread(osPriorityLow)
+    , m_AvgFilter{AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER)}
 {
     setColor(WHITE);
     setFrequency(FREQ_002);
@@ -28,7 +30,8 @@ ColorSensor::ColorSensor(PinName pin) : m_PwmIn(pin),
     // start thread
     m_Thread.start(callback(this, &ColorSensor::threadTask));
 
-    // attach sendThreadFlag() to ticker so that sendThreadFlag() is called periodically, which signals the thread to execute
+    // attach sendThreadFlag() to ticker so that sendThreadFlag() is called periodically, which signals the thread to
+    // execute
     m_Ticker.attach(callback(this, &ColorSensor::sendThreadFlag), std::chrono::microseconds{PERIOD_MUS});
 }
 
@@ -37,14 +40,15 @@ ColorSensor::ColorSensor(PinName pin) : m_PwmIn(pin),
  *
  * Uses a shorter averaging window by default (faster response, less smoothing).
  */
-ColorSensor::ColorSensor(PinName pin, PinName led, PinName s0, PinName s1, PinName s2, PinName s3) : m_PwmIn(pin),
-                                                                                        m_Led(led, 0),
-                                                                                        m_S0(s0, 0),
-                                                                                        m_S1(s1, 0),
-                                                                                        m_S2(s2, 0),
-                                                                                        m_S3(s3, 0),
-                                                                                        m_Thread(osPriorityLow),
-                                                                                        m_AvgFilter{AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER)}
+ColorSensor::ColorSensor(PinName pin, PinName led, PinName s0, PinName s1, PinName s2, PinName s3)
+    : m_PwmIn(pin)
+    , m_Led(led, 0)
+    , m_S0(s0, 0)
+    , m_S1(s1, 0)
+    , m_S2(s2, 0)
+    , m_S3(s3, 0)
+    , m_Thread(osPriorityLow)
+    , m_AvgFilter{AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER), AvgFilter(N_FILTER)}
 {
     setColor(WHITE);
     setFrequency(FREQ_002);
@@ -53,7 +57,8 @@ ColorSensor::ColorSensor(PinName pin, PinName led, PinName s0, PinName s1, PinNa
     // start thread
     m_Thread.start(callback(this, &ColorSensor::threadTask));
 
-    // attach sendThreadFlag() to ticker so that sendThreadFlag() is called periodically, which signals the thread to execute
+    // attach sendThreadFlag() to ticker so that sendThreadFlag() is called periodically, which signals the thread to
+    // execute
     m_Ticker.attach(callback(this, &ColorSensor::sendThreadFlag), std::chrono::microseconds{PERIOD_MUS});
 }
 
@@ -104,15 +109,23 @@ void ColorSensor::reset()
  */
 void ColorSensor::setCalibration()
 {
-    m_reference_black.red = 381.5f;     // measure the average raw frequency of the red channel with a black surface and store it as the black reference (dark level)
-    m_reference_black.green = 353.5f;   // measure the average raw frequency of the green channel with a black surface and store it as the black reference (dark level)
-    m_reference_black.blue = 409.0f;    // measure the average raw frequency of the blue channel with a black surface and store it as the black reference (dark level)
-    m_reference_black.white = 1230.0f;  // measure the average raw frequency of the clear channel with a black surface and store it as the black reference (dark level)
+    m_reference_black.red = 381.5f;   // measure the average raw frequency of the red channel with a black surface and
+                                      // store it as the black reference (dark level)
+    m_reference_black.green = 353.5f; // measure the average raw frequency of the green channel with a black surface and
+                                      // store it as the black reference (dark level)
+    m_reference_black.blue = 409.0f;  // measure the average raw frequency of the blue channel with a black surface and
+                                      // store it as the black reference (dark level)
+    m_reference_black.white = 1230.0f; // measure the average raw frequency of the clear channel with a black surface
+                                       // and store it as the black reference (dark level)
 
-    m_reference_white.red = 714.0f;     // measure the average raw frequency of the red channel with a white surface and store it as the white reference (normalization / white balance)
-    m_reference_white.green = 679.0f;   // measure the average raw frequency of the green channel with a white surface and store it as the white reference (normalization / white balance)
-    m_reference_white.blue = 762.0f;    // measure the average raw frequency of the blue channel with a white surface and store it as the white reference (normalization / white balance)
-    m_reference_white.white = 2230.0f;  // measure the average raw frequency of the clear channel with a white surface and store it as the white reference (normalization / white balance)
+    m_reference_white.red = 714.0f;   // measure the average raw frequency of the red channel with a white surface and
+                                      // store it as the white reference (normalization / white balance)
+    m_reference_white.green = 679.0f; // measure the average raw frequency of the green channel with a white surface and
+                                      // store it as the white reference (normalization / white balance)
+    m_reference_white.blue = 762.0f;  // measure the average raw frequency of the blue channel with a white surface and
+                                      // store it as the white reference (normalization / white balance)
+    m_reference_white.white = 2230.0f; // measure the average raw frequency of the clear channel with a white surface
+                                       // and store it as the white reference (normalization / white balance)
 
     m_calib_black[0] = m_reference_black.red;
     m_calib_black[1] = m_reference_black.green;
@@ -133,16 +146,22 @@ void ColorSensor::setCalibration()
 
     for (int i = 0; i < 3; i++) {
         m_ratio[i] = (m_calib_white[i] - m_calib_black[i]) / denom;
-        if (m_ratio[i] < eps) m_ratio[i] = eps; // avoid divide by zero later
+        if (m_ratio[i] < eps)
+            m_ratio[i] = eps; // avoid divide by zero later
     }
-    
 }
 
 /**
  * @brief Set custom calibration values programmatically.
  */
-void ColorSensor::setCustomCalibration(float r_black, float g_black, float b_black, float c_black,
-                                       float r_white, float g_white, float b_white, float c_white)
+void ColorSensor::setCustomCalibration(float r_black,
+                                       float g_black,
+                                       float b_black,
+                                       float c_black,
+                                       float r_white,
+                                       float g_white,
+                                       float b_white,
+                                       float c_white)
 {
     m_reference_black.red = r_black;
     m_reference_black.green = g_black;
@@ -172,7 +191,8 @@ void ColorSensor::setCustomCalibration(float r_black, float g_black, float b_bla
 
     for (int i = 0; i < 3; i++) {
         m_ratio[i] = (m_calib_white[i] - m_calib_black[i]) / denom;
-        if (m_ratio[i] < eps) m_ratio[i] = eps;
+        if (m_ratio[i] < eps)
+            m_ratio[i] = eps;
     }
 }
 
@@ -198,14 +218,10 @@ void ColorSensor::setFrequency(frequency_t frequency)
     m_S0 = (frequency >> 1) & 1; // MSB
 }
 
-
 /**
  * @brief Turn illumination LED on/off.
  */
-void ColorSensor::switchLed(ledstate_t led_state)
-{
-    m_Led = led_state;
-}
+void ColorSensor::switchLed(ledstate_t led_state) { m_Led = led_state; }
 
 /**
  * @brief Worker thread: periodically samples all 4 channels.
@@ -220,8 +236,7 @@ void ColorSensor::threadTask()
         ThisThread::flags_wait_any(m_ThreadFlag);
 
         // Sequence through channels in the order defined by m_color[].
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             setColor(m_color[i]);
             // Reset PwmIn timer so the first rising edge of the new channel
             // measures a true period instead of the gap since the previous channel.
@@ -234,7 +249,7 @@ void ColorSensor::threadTask()
 
             // catch division by zero
             if (period > 1e-6f) {
-                m_color_Hz[i] = 1.0f/period;
+                m_color_Hz[i] = 1.0f / period;
 
                 // average filtered color
                 if (m_is_first_run[i]) {
@@ -244,8 +259,8 @@ void ColorSensor::threadTask()
                     m_color_Avg_Hz[i] = m_AvgFilter[i].apply(m_color_Hz[i]);
                 }
             }
-        }    
-        applyCalibration(m_color_Avg_Hz);    
+        }
+        applyCalibration(m_color_Avg_Hz);
     }
 }
 
@@ -269,14 +284,14 @@ void ColorSensor::applyCalibration(const float *color)
     }
 
     const float eps = 1e-3f;
-    
+
     // Clear channel after black subtraction is the denominator
     if (color0[3] < eps) {
         return; // too dark / invalid
     }
 
     m_color_cal[3] = color0[3];
-    
+
     // Chromatic ratios (relative to clear)
     float ratio[3];
     for (int i = 0; i < 3; i++) {
@@ -299,7 +314,6 @@ void ColorSensor::applyCalibration(const float *color)
     for (int i = 0; i < 3; i++) {
         m_color_norm[i] = m_color_cal[i] / max_rgb;
     }
-
 }
 
 int ColorSensor::getColor()
@@ -308,25 +322,25 @@ int ColorSensor::getColor()
     const float c0 = std::max(0.0f, m_color_cal[3]);
 
     // ---- Tunables ----
-    const float C0_BLACK_MAX = 80.0f;     // below => BLACK
-    const float C0_WHITE_MIN = 650.0f;    // above + neutral => WHITE
+    const float C0_BLACK_MAX = 80.0f;  // below => BLACK
+    const float C0_WHITE_MIN = 650.0f; // above + neutral => WHITE
 
-    const float SATP_GRAY_MAX  = 0.08f;   // below => neutral
-    const float SATP_COLOR_MIN = 0.10f;   // allow slightly less saturated colors
+    const float SATP_GRAY_MAX = 0.08f;  // below => neutral
+    const float SATP_COLOR_MIN = 0.10f; // allow slightly less saturated colors
 
     // Hue boundaries (simplified for R, G, B, Y only)
-    const float H_RED_MAX     = 30.0f;
-    const float H_YELLOW_MAX  = 90.0f;
-    const float H_GREEN_MAX   = 150.0f;
-    const float H_BLUE_MAX    = 330.0f;   // widened: blue often shifts toward violet after calibration
+    const float H_RED_MAX = 30.0f;
+    const float H_YELLOW_MAX = 90.0f;
+    const float H_GREEN_MAX = 150.0f;
+    const float H_BLUE_MAX = 330.0f; // widened: blue often shifts toward violet after calibration
 
     // Blue fallback if hue is unstable but blue channel is clearly dominant.
     const float BLUE_DOM_MIN = 1.10f;
 
     // Yellow override thresholds tuned from live logs:
     // your yellow samples were around r/b~1.59, g/b~1.18, g/r~0.74.
-    const float YEL_RB_MIN = 1.15f;      // red should be above blue
-    const float YEL_GB_MIN = 1.10f;      // green should also be above blue
+    const float YEL_RB_MIN = 1.15f; // red should be above blue
+    const float YEL_GB_MIN = 1.10f; // green should also be above blue
 
     const int STABLE_COUNT = 3;
 
@@ -347,14 +361,11 @@ int ColorSensor::getColor()
     // ---- Brightness gates ----
     if (c0 < C0_BLACK_MAX) {
         candidate = 1; // BLACK
-    }
-    else if (satp < SATP_GRAY_MAX && c0 > C0_WHITE_MIN) {
+    } else if (satp < SATP_GRAY_MAX && c0 > C0_WHITE_MIN) {
         candidate = 2; // WHITE
-    }
-    else if (satp < SATP_COLOR_MIN) {
+    } else if (satp < SATP_COLOR_MIN) {
         candidate = 0; // UNKNOWN
-    }
-    else {
+    } else {
         // ---- YELLOW DETECTION (before HSV hue) ----
         // Yellow: red and green both dominate blue, AND green is close to red.
         // Red:    r >> g -> rg_ratio tends to be low.
@@ -362,7 +373,8 @@ int ColorSensor::getColor()
         const float gb_y = g0 / std::max(b0, eps);
         const float rg_ratio = g0 / std::max(r0, eps); // close to 1 for yellow, low for red
 
-        if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_ratio > 0.68f) {
+        const float gr_ratio = g0 / std::max(r0, eps); // green vs red
+        if (rb_y > YEL_RB_MIN && gb_y > YEL_GB_MIN && rg_ratio > 0.68f && gr_ratio < 1.5f) {
             candidate = 4; // YELLOW
         } else {
             // Safe normalization for hue
@@ -379,17 +391,26 @@ int ColorSensor::getColor()
             if (delta < eps) {
                 candidate = 0;
             } else {
-                if (cmax == r)      h = 60.0f * std::fmod(((g - b) / delta), 6.0f);
-                else if (cmax == g) h = 60.0f * (((b - r) / delta) + 2.0f);
-                else                h = 60.0f * (((r - g) / delta) + 4.0f);
-                if (h < 0.0f) h += 360.0f;
+                if (cmax == r)
+                    h = 60.0f * std::fmod(((g - b) / delta), 6.0f);
+                else if (cmax == g)
+                    h = 60.0f * (((b - r) / delta) + 2.0f);
+                else
+                    h = 60.0f * (((r - g) / delta) + 4.0f);
+                if (h < 0.0f)
+                    h += 360.0f;
 
                 // Simplified classification: RED, GREEN, BLUE only
-                if (h <= H_RED_MAX || h >= 330.0f)  candidate = 3; // RED
-                else if (h <= H_YELLOW_MAX)         candidate = 4; // YELLOW
-                else if (h <= H_GREEN_MAX)          candidate = 5; // GREEN
-                else if (h <= H_BLUE_MAX)           candidate = 7; // BLUE
-                else                                candidate = 0; // UNKNOWN
+                if (h <= H_RED_MAX || h >= 330.0f)
+                    candidate = 3; // RED
+                else if (h <= H_YELLOW_MAX)
+                    candidate = 4; // YELLOW
+                else if (h <= H_GREEN_MAX)
+                    candidate = 5; // GREEN
+                else if (h <= H_BLUE_MAX)
+                    candidate = 7; // BLUE
+                else
+                    candidate = 0; // UNKNOWN
 
                 // Guard against red false positives on yellow surfaces.
                 // If green is still relatively high compared to red, treat it as yellow.
@@ -407,34 +428,47 @@ int ColorSensor::getColor()
         }
 
 #if COLOR_DEBUG
-        printf("c0=%.1f  r0=%.3f g0=%.3f b0=%.3f  satp=%.3f  out=%d\n",
-               c0, r0, g0, b0, satp, candidate);
+        printf("c0=%.1f  r0=%.3f g0=%.3f b0=%.3f  satp=%.3f  out=%d\n", c0, r0, g0, b0, satp, candidate);
 #endif
     }
 
     // ---- Hysteresis ----
     static int last = 0;
-    static int cnt  = 0;
+    static int cnt = 0;
 
-    if (candidate == last) cnt = std::min(cnt + 1, STABLE_COUNT);
-    else { last = candidate; cnt = 1; }
+    if (candidate == last)
+        cnt = std::min(cnt + 1, STABLE_COUNT);
+    else {
+        last = candidate;
+        cnt = 1;
+    }
 
     return (cnt >= STABLE_COUNT) ? candidate : last;
 }
 
-const char* ColorSensor::getColorString(int color)
+const char *ColorSensor::getColorString(int color)
 {
     switch (color) {
-        case 0: return "UNKNOWN";
-        case 1: return "BLACK";
-        case 2: return "WHITE";
-        case 3: return "RED";
-        case 4: return "YELLOW";
-        case 5: return "GREEN";
-        case 6: return "CYAN";
-        case 7: return "BLUE";
-        case 8: return "MAGENTA";
-        default: return "INVALID";
+        case 0:
+            return "UNKNOWN";
+        case 1:
+            return "BLACK";
+        case 2:
+            return "WHITE";
+        case 3:
+            return "RED";
+        case 4:
+            return "YELLOW";
+        case 5:
+            return "GREEN";
+        case 6:
+            return "CYAN";
+        case 7:
+            return "BLUE";
+        case 8:
+            return "MAGENTA";
+        default:
+            return "INVALID";
     }
 }
 
@@ -443,7 +477,4 @@ const char* ColorSensor::getColorString(int color)
  *
  * Called by the ticker at PERIOD_MUS cadence.
  */
-void ColorSensor::sendThreadFlag()
-{
-    m_Thread.flags_set(m_ThreadFlag);
-}
+void ColorSensor::sendThreadFlag() { m_Thread.flags_set(m_ThreadFlag); }

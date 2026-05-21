@@ -45,7 +45,8 @@ private:
     static constexpr float GEAR_RATIO   = 78.125f;
     static constexpr float KN           = 180.0f / 12.0f; // rpm/V
     static constexpr float VOLTAGE_MAX  = 12.0f;
-
+    bool m_planner_enabled = false;
+    
     DigitalOut m_enableMotors;
     DCMotor    m_motor;
 };

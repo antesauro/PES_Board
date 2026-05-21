@@ -75,7 +75,7 @@ int main()
     abladen::AbladenModule abladen_module;
     MotorModuleArm &crane_rope_motor = gripper_actuators::getArmMotor();
     UserButtonCraneControl user_button_crane_control(
-        BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 5000, CRANE_MANUAL_UP_VELOCITY_RPS);
+        BUTTON1, crane_rope_motor, callback(&toggle_do_execute_main_fcn), 3000, CRANE_MANUAL_UP_VELOCITY_RPS);
 
     user_button_crane_control.initialize();
 
@@ -132,6 +132,12 @@ int main()
         main_task_timer.reset();
 
         user_button_crane_control.update();
+
+        // If the button is pressed while driving, instantly force the robot back to READY and trigger a reset!
+        if (!do_execute_main_task && robot_state != RobotState::INITIAL && robot_state != RobotState::READY) {
+            do_reset_all_once = true;
+            robot_state = RobotState::READY;
+        }
         // state machine
         switch (robot_state) {
             case RobotState::INITIAL:
@@ -146,81 +152,92 @@ int main()
                 crane_rope_motor.enableMotors();
 
                 color_sensor_module.update();
-
+                //gripper_actuators::testPositionSafety();
                 robot_state = RobotState::READY;
                 break;
 
             case RobotState::READY:
                 printReadyState();
+                color_sensor_module.printColor(); // For testing the colour recognition
+                // 1. DO THE RESET FIRST
+                if (do_reset_all_once) {
+                    do_reset_all_once = false;
 
-                if (do_execute_main_task) {
-                    robot_state = RobotState::START;
-                    startup_rotation = motor_module.getRotation(); // Registers initial Rotation of Drive DC Motor
+                    // Do NOT jump to INITIAL. We just wipe the variables and stay in READY!
+                    rot_abgegeben = false;
+                    gelb_abgegeben = false;
+                    blau_abgegeben = false;
+                    gruen_abgegeben = false;
+                    schon_ein_paeckchen_aufgenommen = 0;
+                    house_event_cooldown_cycles = 0;
+                    house_stop_confirm_cycles = 0;
+                    house_stop_timeout_cycles_remaining = 0;
+                    pickup_color_retry_cycles = 0;
+                    deliver_color_retry_cycles = 0;
+                    pickup_candidate_color = 0;
+                    pickup_candidate_count = 0;
+                    deliver_candidate_color = 0;
+                    deliver_candidate_count = 0;
+                    color_sensor_module.resetPackageColorHold();
+                    print_cycle_counter = 0;
 
-                    led1 = 1;
+                    // GENTLY STOP INSTEAD OF CUTTING POWER TO HARDWARE
+                    motor_module.stop();
+                    servo_module.center();
 
-                } else {
-                    // the following code block gets executed only once
-                    if (do_reset_all_once) {
-                        do_reset_all_once = false;
-                        // --- variables and objects that should be reset go here ---
-                        // reset variables and objects
-                        robot_state = RobotState::INITIAL;
-                        rot_abgegeben = false;
-                        gelb_abgegeben = false;
-                        blau_abgegeben = false;
-                        gruen_abgegeben = false;
-                        schon_ein_paeckchen_aufgenommen = 0;
-                        house_event_cooldown_cycles = 0;
-                        house_stop_confirm_cycles = 0;
-                        house_stop_timeout_cycles_remaining = 0;
-                        pickup_color_retry_cycles = 0;
-                        deliver_color_retry_cycles = 0;
-                        pickup_candidate_color = 0;
-                        pickup_candidate_count = 0;
-                        deliver_candidate_color = 0;
-                        deliver_candidate_count = 0;
-                        color_sensor_module.resetPackageColorHold();
-                        print_cycle_counter = 0;
-                        servo_module.disable();
-                        motor_module.disable();
-                        gripper_actuators::disableDrehkranzServo();
-                        gripper_actuators::disableLenkungServo();
-                        crane_rope_motor.disableMotors();
-                        led1 = 0;
-                        distance_traveled = 0.0f;
-                        startup_rotation = 0.0f;
-                    }
+                    // SEND CRANE HOME SLOWLY
+                    gripper_actuators::returnSlow();
+
+                    // FORCE A DELAY SO THE ARM HAS PHYSICAL TIME TO MOVE BEFORE STARTING!
+                    thread_sleep_for(1500);
+
+                    led1 = 0;
+                    distance_traveled = 0.0f;
+                    startup_rotation = 0.0f;
+
+                    break;
                 }
 
+                // 2. START THE RUN
+                if (do_execute_main_task) {
+                    robot_state = RobotState::START;
+                    startup_rotation = motor_module.getRotation();
+                    gripper_actuators::enableFastMode();
+                    led1 = 1;
+                }
                 break;
             case RobotState::START: {
                 const bool do_print = (print_cycle_counter == 0);
                 line_array_module.update(do_print);
 
-                distance_traveled = (motor_module.getRotation() - startup_rotation) *
-                                    -1.0f; // Calculate distance traveled by Drive Motor
-                static constexpr float DRIVE_MAX_RPS = 0.2f;
-                printf("Distance traveled: %f\n", distance_traveled);
-                // First intersection encounter (noch testen mit Abstand!)
-                if (distance_traveled >= 0.1f && distance_traveled < 2.2f) {
-                    motor_module.setVelocity(-1.0f);     // force speed to not block
-                    servo_module.setSteeringAngle(0.8f); // set turn angle for left turn
-                } else if (distance_traveled >= 2.2f && distance_traveled < 4.4f) {
-                    motor_module.setVelocity(-1.0f);      // force speed to not block
-                    servo_module.setSteeringAngle(0.15f); // set turn angle for right turn to get back on track
-                } else if (distance_traveled >= 4.4f && distance_traveled < 4.6f) {
-                    motor_module.setVelocity(-0.5f);    // force speed to not block
-                    servo_module.setSteeringAngle(0.5); // set turn angle for left turn to smooth out
-                } else {
-                    // normal line follow
-                    float drive_scale = line_array_module.driveVoltage() / 12.0f;
-                    motor_module.setVelocity(drive_scale * DRIVE_MAX_RPS);
-                    servo_module.setSteeringAngle(0.5f);
-                }
+                // Add a static step counter that remembers where we are
+                static int start_sequence_step = 0;
 
-                if (distance_traveled >= 4.6f) {
+                distance_traveled = (motor_module.getRotation() - startup_rotation) * -1.0f;
+
+                if (start_sequence_step == 0) {
+                    motor_module.setVelocity(-0.2f);
+                    servo_module.setSteeringAngle(0.5f);
+                    if (distance_traveled >= 0.1f)
+                        start_sequence_step = 1; // Move to next step
+                } else if (start_sequence_step == 1) {
+                    motor_module.setVelocity(-1.0f);
+                    servo_module.setSteeringAngle(0.8f);
+                    if (distance_traveled >= 2.2f)
+                        start_sequence_step = 2;
+                } else if (start_sequence_step == 2) {
+                    motor_module.setVelocity(-1.0f);
+                    servo_module.setSteeringAngle(0.15f);
+                    if (distance_traveled >= 4.7f)
+                        start_sequence_step = 3;
+                } else if (start_sequence_step == 3) {
+                    motor_module.setVelocity(-0.3f);
+                    servo_module.setSteeringAngle(0.55f);
+                    if (distance_traveled >= 5.0f)
+                        start_sequence_step = 4;
+                } else if (start_sequence_step == 4) {
                     robot_state = RobotState::DRIVE;
+                    start_sequence_step = 0; // Reset for the next time we run the course
                 }
 
                 print_cycle_counter++;
@@ -484,8 +501,9 @@ int main()
 
                 if (delivered_now) {
                     if (rot_abgegeben && blau_abgegeben && gelb_abgegeben && gruen_abgegeben) {
-                        robot_state = RobotState::INITIAL;
-                        toggle_do_execute_main_fcn(); // stop main task execution after final completed dropoff
+                        do_reset_all_once = true;
+                        do_execute_main_task = false;
+                        robot_state = RobotState::READY;
                     } else {
                         robot_state = RobotState::LOSFAHRENN;
                     }

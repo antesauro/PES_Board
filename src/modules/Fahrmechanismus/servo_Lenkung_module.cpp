@@ -6,7 +6,7 @@ namespace {
 static constexpr float SERVO_D0_ANG_MIN = 0.035f;
 static constexpr float SERVO_D0_ANG_MAX = 0.110f;
 // Center of the servo travel range (normalized 0..1 position, NOT a duty cycle).
-static constexpr float SERVO_CENTER_ANGLE = 0.5f;
+static constexpr float SERVO_CENTER_ANGLE = 0.55f;
 } // namespace
 
 ServoModule::ServoModule()
