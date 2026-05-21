@@ -2,14 +2,14 @@
 
 #include "PESBoardPinMap.h"
 
-static constexpr float CALIB_BLACK_R = 355.97f;
-static constexpr float CALIB_BLACK_G = 355.37f;
-static constexpr float CALIB_BLACK_B = 1320.07f;
-static constexpr float CALIB_BLACK_C = 535.65f;
-static constexpr float CALIB_WHITE_R = 2197.95f;
-static constexpr float CALIB_WHITE_G = 2336.46f;
-static constexpr float CALIB_WHITE_B = 8210.50f;
-static constexpr float CALIB_WHITE_C = 3553.85f;
+static constexpr float CALIB_BLACK_R = 512.19f;
+static constexpr float CALIB_BLACK_G = 514.56f;
+static constexpr float CALIB_BLACK_B = 795.54f;
+static constexpr float CALIB_BLACK_C = 1963.94f;
+static constexpr float CALIB_WHITE_R = 2582.65f;
+static constexpr float CALIB_WHITE_G = 2831.28f;
+static constexpr float CALIB_WHITE_B = 4452.38f;
+static constexpr float CALIB_WHITE_C = 10288.24f;
 
 static int sensorColorToPackageColor(int sensor_color)
 {
@@ -27,8 +27,8 @@ static int sensorColorToPackageColor(int sensor_color)
     }
 }
 
-ColorSensorModule::ColorSensorModule() :
-    m_sensor(PB_3)
+ColorSensorModule::ColorSensorModule()
+    : m_sensor(PB_3)
 {
     m_sensor.switchLed(OFF);
     calibrate();
@@ -36,10 +36,14 @@ ColorSensorModule::ColorSensorModule() :
 
 void ColorSensorModule::calibrate()
 {
-    m_sensor.setCustomCalibration(
-        CALIB_BLACK_R, CALIB_BLACK_G, CALIB_BLACK_B, CALIB_BLACK_C,
-        CALIB_WHITE_R, CALIB_WHITE_G, CALIB_WHITE_B, CALIB_WHITE_C
-    );
+    m_sensor.setCustomCalibration(CALIB_BLACK_R,
+                                  CALIB_BLACK_G,
+                                  CALIB_BLACK_B,
+                                  CALIB_BLACK_C,
+                                  CALIB_WHITE_R,
+                                  CALIB_WHITE_G,
+                                  CALIB_WHITE_B,
+                                  CALIB_WHITE_C);
 }
 
 void ColorSensorModule::update()
@@ -51,13 +55,10 @@ void ColorSensorModule::update()
 void ColorSensorModule::printColor()
 {
     const int sensor_color_num = m_sensor.getColor();
-    const char* sensor_color_str = m_sensor.getColorString(sensor_color_num);
+    const char *sensor_color_str = m_sensor.getColorString(sensor_color_num);
     const int package_color_num = detectedPackageColor();
 
-    printf("Color sensor=%d (%s) package=%d\n",
-           sensor_color_num,
-           sensor_color_str,
-           package_color_num);
+    printf("Color sensor=%d (%s) package=%d\n", sensor_color_num, sensor_color_str, package_color_num);
 }
 
 int ColorSensorModule::detectedPackageColor()
