@@ -20,8 +20,8 @@ static constexpr float HOUSE_STOP_VELOCITY_THRESHOLD_RPS = 0.03f;
 static constexpr int HOUSE_STOP_CONFIRM_CYCLES = 5;
 static constexpr int HOUSE_STOP_TIMEOUT_MS = 1200;
 static constexpr int COLOR_RETRY_TIMEOUT_MS = 1000;
-static constexpr int PICKUP_COLOR_STABLE_CYCLES = 5;
-static constexpr int DELIVER_COLOR_STABLE_CYCLES = 4;
+static constexpr int PICKUP_COLOR_STABLE_CYCLES = 10;
+static constexpr int DELIVER_COLOR_STABLE_CYCLES = 10;
 
 bool do_execute_main_task = false; // this variable will be toggled via the user button (blue button) and
                                    // decides whether to execute the main task or not

@@ -8,13 +8,13 @@ namespace gripper_cfg {
 // 0.0f gegen hinten, 1.0f gegen vorne
 constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_D = 0.8f;
 constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_D = 0.62f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.30f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_D = 0.29f;
 
 // Lenkung bei Aufnahme/Ablage am Haus fuer.
 // 0.0f hoch und 1.0f unten
-constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.35f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.38f;
-constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.18f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_tunnel_L = 0.3f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_ROT_GELB_L = 0.36f;
+constexpr float AUFNEHMEN_ABLEGEN_POS_BLAU_GRUEN_L = 0.15f;
 // Sicherheitswinkel fuer vertikale Ausrichtung des Arms
 constexpr float VERTIKAL_SICHERHEITS_WINKEL_L = 1.0f;
 
@@ -34,9 +34,9 @@ extern bool lager;
 
 // Seilhub fuer Haus und Lager.
 // ROT_GRUEN
-constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 4.0f;
+constexpr float SEIL_ROTATIONEN_HAUS_ROT_GRUEN = 5.0f;
 // blau_gruen
-constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 6.0f;
+constexpr float SEIL_ROTATIONEN_HAUS_BLAU_GELB = 6.2f;
 // Lagerpos1
 constexpr float SEIL_ROTATIONEN_LAGER_POS_1 = 2.5f;
 // Lagerpos2

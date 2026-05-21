@@ -6,17 +6,17 @@
 #include "debug_print.h"
 
 namespace {
-static constexpr float STEERING_CENTER = 0.55f;
+static constexpr float STEERING_CENTER = 0.5f;
 static constexpr float STEERING_MIN = 0.15f; // min servo position with 1.25 gear ratio
 static constexpr float STEERING_MAX = 0.85f; // max servo position with 1.25 gear ratio
 static constexpr float DRIVE_VOLTAGE_FULL = 12.0f;
 
 // --- NEW NON-LINEAR CONTROLLER GAINS ---
-static constexpr float KP_LINEAR = -0.30f;   // Gentle steering for straightaways
-static constexpr float KP_NONLINEAR = -2.8f; // Aggressive booster for sharp curves
+static constexpr float KP_LINEAR = -0.25f;   // Gentle steering for straightaways
+static constexpr float KP_NONLINEAR = -2.5f; // Aggressive booster for sharp curves
 
 // static constexpr float CORRECTION_ALPHA = 0.3f;  // Keep the EMA filter for smooth servo action
-static constexpr float STEERING_STEP_MAX = 0.65f;
+static constexpr float STEERING_STEP_MAX = 0.7f;
 
 static constexpr uint8_t SENSOR_MASK_B2_TO_B5 = 0x3C;
 static constexpr uint8_t SENSOR_MASK_ALL_BITS = 0x7E;
@@ -54,8 +54,8 @@ uint8_t LineArrayModule::update(bool do_print)
     const float measuredAngle = lineDetected ? m_sensorBar.getAngleRad() : 0.0f;
 
     // Fixed (slow on straights, fast in curves):
-    float adaptive_alpha = 0.15f + (fabsf(measuredAngle) * 1.2f);
-    adaptive_alpha = clampf(adaptive_alpha, 0.55f, 0.85f);
+    float adaptive_alpha = 0.15f + (fabsf(measuredAngle) * 0.5f);
+    adaptive_alpha = clampf(adaptive_alpha, 0.25f, 0.75f);
 
     m_filteredCorrection += adaptive_alpha * (measuredAngle - m_filteredCorrection);
 
@@ -66,7 +66,7 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 1. THE CURVE FILTER
     // If the error is large, we are in a curve. Only look for houses if we are driving straight!
-    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.25f;
+    const bool isDrivingStraight = fabsf(m_filteredCorrection) < 0.20f;
 
     // 2. THE CANDIDATES
     const bool pickupCandidate = angleIsCentered && isDrivingStraight && numActiveLeds >= 5;
@@ -115,9 +115,9 @@ uint8_t LineArrayModule::update(bool do_print)
 
     // 2. Proportional Braking (only applies outside the deadzone)
     // We bumped the multiplier to 3.0f so it still brakes hard for real curves!
-    float drive_scale = 1.0f - (braking_error * 2.5f);
+    float drive_scale = 1.0f - (braking_error * 2.0f);
 
-    const float MIN_DRIVE_SCALE = 0.45f;
+    const float MIN_DRIVE_SCALE = 0.55f;
 
     // Clamp the speed so it never goes too slow or too fast
     if (drive_scale < MIN_DRIVE_SCALE) {
